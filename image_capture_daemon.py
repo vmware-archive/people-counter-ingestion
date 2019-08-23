@@ -14,6 +14,13 @@ class App():
         image_resolution_default = [1024, 768]
         image_capture_interval_default = 10
         image_filename_format_default = 'image{timestamp:%Y-%m-%d-%H-%M-%S}.jpg'
+        image_filename_format_help = '''The name given to the image files. 
+                Acceptable values are any string plus {counter} and/or {timestamp} (default: image{timestamp:%%Y-%%m-%%d-%%H-%%M-%%S}.jpg).
+                Examples: image{counter}.jpg yields files like image1.jpg, image2.jpg, ...;
+                image{counter:02d}.jpg yields files like image01.jpg, image02.jpg, ...;
+                foo{timestamp}.jpg yields files like foo2013-10-05 12:07:12.346743.jpg, foo2013-10-05 12:07:32.498539, ...;
+                bar{timestamp:%%H-%%M-%%S-%%f}.jpg yields files like bar12-10-02-561527.jpg, bar12-10-14-905398.jpg;
+                foo-bar{timestamp:%%H%%M%%S}-{counter:03d}.jpg yields files like foo-bar121002-001.jpg, foo-bar121013-002.jpg, foo-bar121014-003.jpg, ...''' 
 
         # Parse values from the command line
         parser = argparse.ArgumentParser(description='People counter image ingestion service')
@@ -24,23 +31,18 @@ class App():
         parser.add_argument('--image-capture-interval', '-i', dest='image_capture_interval', type=int, default=image_capture_interval_default,
             help='Delay in seconds between image captures (default: {0})'.format(str(image_capture_interval_default)))
         parser.add_argument('--image-filename-format', '-o', dest='image_filename_format', default=image_filename_format_default,
-            help='''The name given to the image files. Acceptable values are any string plus {counter} and/or {timestamp} (default: {0}). 
-                Examples: image{counter}.jpg yields files like image1.jpg, image2.jpg, ...; 
-                image{counter:02d}.jpg yields files like image01.jpg, image02.jpg, ...; 
-                foo{timestamp}.jpg yields files like foo2013-10-05 12:07:12.346743.jpg, foo2013-10-05 12:07:32.498539, ...;
-                bar{timestamp:%H-%M-%S-%f}.jpg yields files like bar12-10-02-561527.jpg, bar12-10-14-905398.jpg;
-                foo-bar{timestamp:%H%M%S}-{counter:03d}.jpg yields files like foo-bar121002-001.jpg, foo-bar121013-002.jpg, foo-bar121014-003.jpg, ...'''.format(image_filename_format_default))
+            help=image_filename_format_help)
         self.args = parser.parse_args()
-        self.validate(args)
+        self.validate()
     
-    def validate(self, args):
+    def validate(self):
         # This function does validation of the command-line arguments
 
-        if not os.access(args.image_storage_folder, os.W_OK):
-            raise Exception('The folder {0} specified for image storage is not writtable'.format(args.image_storage_folder))
-        if args.image_resolution[0] > 2592 or args.image_resolution[1] > 1944:
-            raise Exception('The resolution provided {0} exceeds the max allowed resolution 2592x1944 for the camera'.format(args.image_resolution))
-        if '{counter}' not in args.image_filename_format and '{timestamp}' not in args.image_filename_format:
+        if not os.access(self.args.image_storage_folder, os.W_OK):
+            raise Exception('The folder {0} specified for image storage is not writtable'.format(self.args.image_storage_folder))
+        if self.args.image_resolution[0] > 2592 or self.args.image_resolution[1] > 1944:
+            raise Exception('The resolution provided {0} exceeds the max allowed resolution 2592x1944 for the camera'.format(self.args.image_resolution))
+        if '{counter}' not in self.args.image_filename_format and '{timestamp}' not in self.args.image_filename_format:
             raise Exception('The image file format provided did not contain {counter} or {timestamp} in it')
 
     def run(self):
