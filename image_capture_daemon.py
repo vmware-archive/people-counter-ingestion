@@ -8,7 +8,7 @@ import threading
 import sys
 import signal
 
-format = "%(asctime)s: %(message)s"
+format = "%(asctime)s - %(levelname)s: %(threadName)s - %(message)s"
 logging.basicConfig(format=format, level=logging.DEBUG,
                         datefmt="%H:%M:%S")
 
@@ -59,16 +59,16 @@ class App():
     def startGarbageCollection(self):
         # This function cleans up the directory where images are stored based on a limit on a number of images to keep defined by the user
 
-        logging.info("GarbageCollectionThread - Starting garbage collection on folder %s", self.args.image_storage_folder)
+        logging.info("Starting garbage collection on folder %s", self.args.image_storage_folder)
         while True:
-            logging.debug("GarbageCollectionThread - sleeping for %d minutes", self.image_cleanup_interval_minutes)
+            logging.debug("Sleeping for %d minutes", self.image_cleanup_interval_minutes)
             sleep(self.image_cleanup_interval_minutes * 60)
 
             filenames = os.listdir(self.args.image_storage_folder)
             full_file_paths = []
             search_criteria = self.args.image_filename_format.split('.')
             search_criteria = search_criteria[len(search_criteria) - 1]
-            logging.debug("GarbageCollectionThread - Looking for files with extention {0}".format(search_criteria))
+            logging.debug("Looking for files with extention {0}".format(search_criteria))
 
             # Find all the files with a particualar extention
             for filename in filenames:
@@ -78,7 +78,7 @@ class App():
             # Exit the function if no images are present
             file_list_size = len(full_file_paths)
             if file_list_size <= self.image_cache_size:
-                logging.debug("GarbageCollectionThread - Image storage folder has not exceeded the max number of files allowed: {0}. No clean up performed".format(str(self.image_cache_size)))
+                logging.debug("Image storage folder has not exceeded the max number of files allowed: {0}. No clean up performed".format(str(self.image_cache_size)))
                 continue
             
             # Delete all images past the max number of images allowed. Oldest files are deleted first.
@@ -86,36 +86,36 @@ class App():
                 full_file_paths.sort(key=os.path.getctime)
                 print(full_file_paths)
                 number_of_items_to_delete = file_list_size - self.image_cache_size
-                logging.debug("GarbageCollectionThread - has lock")
+                logging.debug("Lock acquired")
                 with self.folder_lock:
                     for i in range(number_of_items_to_delete):
-                        logging.debug("GarbageCollectionThread - Deleting file: {0}".format(full_file_paths[i]))
+                        logging.debug("Deleting file: {0}".format(full_file_paths[i]))
                         os.remove(full_file_paths[i])
-                    logging.debug("GarbageCollectionThread - about to release lock")
+                    logging.debug("About to release lock")
 
     def startImageCollection(self):
         camera = PiCamera()
         camera.resolution = tuple(self.args.image_resolution)
         camera.start_preview()
         sleep(self.camera_warmup_delay)
-        logging.info('ImageCollectionThread - Capturing images to folder %s...', self.args.image_storage_folder)
+        logging.info('Capturing images to folder %s...', self.args.image_storage_folder)
 
         for filename in camera.capture_continuous(self.args.image_storage_folder + '/' + self.args.image_filename_format):
-            logging.debug('ImageCollectionThread - Captured image %s', filename)
+            logging.debug('Captured image %s', filename)
             # Sleep 10 seconds before taking next picture
-            logging.debug("ImageCollectionThread - has lock")
+            logging.debug("Lock acquired")
             with self.folder_lock:
-                logging.debug("ImageCollectionThread - sleeping for %d seconds", self.args.image_capture_interval_seconds)
+                logging.debug("Sleeping for %d seconds", self.args.image_capture_interval_seconds)
                 sleep(self.args.image_capture_interval_seconds)
-                logging.debug("ImageCollectionThread - about to release lock")
+                logging.debug("About to release lock")
 
     def signalHandler(self, sig, frame):
         logging.info('You pressed Ctrl+C. Exiting program...')
         sys.exit(0)
 
     def run(self):
-        image_collection_thread = threading.Thread(target=self.startImageCollection, daemon=True)
-        garbage_collection_thread = threading.Thread(target=self.startGarbageCollection, daemon=True)
+        image_collection_thread = threading.Thread(target=self.startImageCollection, name="ImageCollectionThread", daemon=True)
+        garbage_collection_thread = threading.Thread(target=self.startGarbageCollection, name="GarbageCollectionThread", daemon=True)
         image_collection_thread.start()
         garbage_collection_thread.start()
         logging.debug("All threads initialized")
