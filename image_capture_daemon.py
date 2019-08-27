@@ -3,6 +3,15 @@ from time import sleep
 from picamera import PiCamera
 import argparse
 import os
+import concurrent.futures
+import logging
+import threading
+import sys
+import signal
+
+format = "%(asctime)s: %(message)s"
+logging.basicConfig(format=format, level=logging.DEBUG,
+                        datefmt="%H:%M:%S")
 
 class App():
     def __init__(self):
@@ -10,11 +19,12 @@ class App():
 
         # Default values
         self.image_cache_size = 10
-        self.image_cleanup_interval_mintues = 1
+        self.image_cleanup_interval_minutes = 1
         self.camera_warmup_delay = 2
+        self.folder_lock = threading.RLock()
         image_storage_folder_default = '/tmp'
         image_resolution_default = [1024, 768]
-        image_capture_interval_default = 10
+        image_capture_interval_seconds_default = 10
         image_filename_format_default = 'image{timestamp:%Y-%m-%d-%H-%M-%S}.jpg'
         image_filename_format_help = '''The name given to the image files. 
                 Acceptable values are any string plus {counter} and/or {timestamp} (default: image{timestamp:%%Y-%%m-%%d-%%H-%%M-%%S}.jpg).
@@ -30,8 +40,8 @@ class App():
             help='Folder in the filesystem where images will be stored (default: {0})'.format(image_storage_folder_default))
         parser.add_argument('--image-resolution', '-r', dest='image_resolution', type=int, nargs=2, default=image_resolution_default, 
             help='Resolution for the images taken by the camera. Must be 2 integers. The max resolution is 2592 1944 (default: {0} {1})'.format(str(image_resolution_default[0]), str(image_resolution_default[1])))
-        parser.add_argument('--image-capture-interval', '-i', dest='image_capture_interval', type=int, default=image_capture_interval_default,
-            help='Delay in seconds between image captures (default: {0})'.format(str(image_capture_interval_default)))
+        parser.add_argument('--image-capture-interval', '-i', dest='image_capture_interval_seconds', type=int, default=image_capture_interval_seconds_default,
+            help='Delay in seconds between image captures (default: {0})'.format(str(image_capture_interval_seconds_default)))
         parser.add_argument('--image-filename-format', '-o', dest='image_filename_format', default=image_filename_format_default,
             help=image_filename_format_help)
         self.args = parser.parse_args()
@@ -47,47 +57,70 @@ class App():
         if '{counter' not in self.args.image_filename_format and '{timestamp' not in self.args.image_filename_format:
             raise Exception('The image file format provided {0} did not contain {{counter}} or {{timestamp}} in it'.format(self.args.image_filename_format))
 
-    def cleanImageStorageDirectory(self):
+    def startGarbageCollection(self):
         # This function cleans up the directory where images are stored based on a limit on a number of images to keep defined by the user
 
-        filenames = os.listdir(self.args.image_storage_folder)
-        full_file_paths = []
-        search_criteria = self.args.image_filename_format.split('.')
-        search_criteria = search_criteria[len(search_criteria) - 1]
-        print("Looking for files with extention {0}".format(search_criteria))
+        logging.info("GarbageCollectionThread - Starting garbage collection on folder %s", self.args.image_storage_folder)
+        while True:
+            logging.debug("GarbageCollectionThread - sleeping for %d minutes", self.image_cleanup_interval_minutes)
+            sleep(self.image_cleanup_interval_minutes * 60)
 
-        # Find all the files with a particualar extention
-        for filename in filenames:
-            if search_criteria in filename:
-                full_file_paths.append(os.path.join(self.args.image_storage_folder, filename))
+            filenames = os.listdir(self.args.image_storage_folder)
+            full_file_paths = []
+            search_criteria = self.args.image_filename_format.split('.')
+            search_criteria = search_criteria[len(search_criteria) - 1]
+            logging.debug("GarbageCollectionThread - Looking for files with extention {0}".format(search_criteria))
 
-        # Exit the function if no images are present
-        file_list_size = len(full_file_paths)
-        if file_list_size <= self.image_cache_size:
-            print("Image storage folder has not exceeded the max number of files allowed: {0}. No clean up performed".format(str(self.image_cache_size)))
-            return
-        
-        # Delete all images past the max number of images allowed. Oldest files are deleted first.
-        if file_list_size > 0:
-            full_file_paths.sort(key=os.path.getctime)
-            print(full_file_paths)
-            number_of_items_to_delete = file_list_size - self.image_cache_size
-            for i in range(number_of_items_to_delete):
-                print("Deleting file: {0}".format(full_file_paths[i]))
-                os.remove(full_file_paths[i])
+            # Find all the files with a particualar extention
+            for filename in filenames:
+                if search_criteria in filename:
+                    full_file_paths.append(os.path.join(self.args.image_storage_folder, filename))
+
+            # Exit the function if no images are present
+            file_list_size = len(full_file_paths)
+            if file_list_size <= self.image_cache_size:
+                logging.debug("GarbageCollectionThread - Image storage folder has not exceeded the max number of files allowed: {0}. No clean up performed".format(str(self.image_cache_size)))
+                continue
+            
+            # Delete all images past the max number of images allowed. Oldest files are deleted first.
+            if file_list_size > 0:
+                full_file_paths.sort(key=os.path.getctime)
+                print(full_file_paths)
+                number_of_items_to_delete = file_list_size - self.image_cache_size
+                logging.debug("GarbageCollectionThread - has lock")
+                with self.folder_lock:
+                    for i in range(number_of_items_to_delete):
+                        logging.debug("GarbageCollectionThread - Deleting file: {0}".format(full_file_paths[i]))
+                        os.remove(full_file_paths[i])
+                    logging.debug("GarbageCollectionThread - about to release lock")
+
+    def startImageCollection(self):
+        camera = PiCamera()
+        camera.resolution = tuple(self.args.image_resolution)
+        camera.start_preview()
+        sleep(self.camera_warmup_delay)
+        logging.info('ImageCollectionThread - Capturing images to folder %s...', self.args.image_storage_folder)
+
+        for filename in camera.capture_continuous(self.args.image_storage_folder + '/' + self.args.image_filename_format):
+            logging.debug('ImageCollectionThread - Captured image %s', filename)
+            # Sleep 10 seconds before taking next picture
+            logging.debug("ImageCollectionThread - has lock")
+            with self.folder_lock:
+                logging.debug("ImageCollectionThread - sleeping for %d seconds", self.args.image_capture_interval_seconds)
+                sleep(self.args.image_capture_interval_seconds)
+                logging.debug("ImageCollectionThread - about to release lock")
+
+    def signalHandler(self, sig, frame):
+        logging.info('You pressed Ctrl+C. Exiting program...')
+        sys.exit(0)
 
     def run(self):
-        while True:
-            camera = PiCamera()
-            camera.resolution = tuple(self.args.image_resolution)
-            camera.start_preview()
-            sleep(self.camera_warmup_delay)
-            print('Capturing images to folder ' + self.args.image_storage_folder + '...')
-            for filename in camera.capture_continuous(self.args.image_storage_folder + '/' + self.args.image_filename_format):
-                print('Captured %s' % filename)
-                # Sleep 10 seconds before taking next picture
-                sleep(self.args.image_capture_interval)
-                self.cleanImageStorageDirectory()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+            executor.submit(self.startImageCollection)
+            executor.submit(self.startGarbageCollection)
+            logging.debug("All threads initialized")
+            signal.signal(signal.SIGINT, self.signalHandler)
+            signal.pause()
 
 app = App()
 app.run()
