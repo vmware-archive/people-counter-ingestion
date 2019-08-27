@@ -3,7 +3,6 @@ from time import sleep
 from picamera import PiCamera
 import argparse
 import os
-import concurrent.futures
 import logging
 import threading
 import sys
@@ -115,12 +114,13 @@ class App():
         sys.exit(0)
 
     def run(self):
-        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-            executor.submit(self.startImageCollection)
-            executor.submit(self.startGarbageCollection)
-            logging.debug("All threads initialized")
-            signal.signal(signal.SIGINT, self.signalHandler)
-            signal.pause()
+        image_collection_thread = threading.Thread(target=self.startImageCollection, daemon=True)
+        garbage_collection_thread = threading.Thread(target=self.startGarbageCollection, daemon=True)
+        image_collection_thread.start()
+        garbage_collection_thread.start()
+        logging.debug("All threads initialized")
+        signal.signal(signal.SIGINT, self.signalHandler)
+        signal.pause()
 
 app = App()
 app.run()
