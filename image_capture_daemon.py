@@ -84,7 +84,7 @@ class App():
             # Delete all images past the max number of images allowed. Oldest files are deleted first.
             if file_list_size > 0:
                 full_file_paths.sort(key=os.path.getctime)
-                print(full_file_paths)
+                logging.debug("Files found: %s",full_file_paths)
                 number_of_items_to_delete = file_list_size - self.image_cache_size
                 logging.debug("Lock acquired")
                 with self.folder_lock:
