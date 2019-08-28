@@ -1,0 +1,14 @@
+[Unit]
+Description=People counter ingestion demo service to continuesly take pictures
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=5
+User=iotadmin
+ExecStart=/usr/bin/python3 /opt/vmware/image_capture_daemon.py
+
+[Install]
+WantedBy=multi-user.target
