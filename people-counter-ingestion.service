@@ -1,5 +1,5 @@
 [Unit]
-Description=People counter ingestion demo service to continuesly take pictures
+Description=People counter ingestion demo service to continuously take pictures
 After=network.target
 StartLimitIntervalSec=0
 

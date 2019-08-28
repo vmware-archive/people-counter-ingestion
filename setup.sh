@@ -1,4 +1,9 @@
 #!/bin/bash
+#
+# Copyright (c) 2019 VMware, Inc. All Rights Reserved.
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
 
 read -sp 'Enter password to create iotadmin user:' userpass
 echo

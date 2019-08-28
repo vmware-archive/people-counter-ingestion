@@ -1,0 +1,16 @@
+package:
+  name: people_counter_ingestion_service
+  description: People counter ingestion demo service to continuously take pictures
+  version: 1.0.0
+  manifest:
+    headlessExecution: true
+    lifecycle:
+      - phase: execute
+        action: setup.sh
+      - phase: activate
+        action: activate.sh
+  attachments:
+    - path: ./activate.sh
+    - path: ../people-counter-ingestion.service
+    - path: ../image_capture_daemon.py
+    - path: ../setup.sh
