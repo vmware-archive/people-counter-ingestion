@@ -7,6 +7,8 @@ import logging
 import threading
 import sys
 import signal
+from string import Template
+import datetime
 
 format = "%(asctime)s - %(levelname)s: %(threadName)s - %(message)s"
 logging.basicConfig(format=format, level=logging.DEBUG,
@@ -20,6 +22,7 @@ class App():
         self.image_cache_size = 10
         self.image_cleanup_interval_minutes = 1
         self.camera_warmup_delay = 2
+        self._filename_counter = 1
         self.folder_lock = threading.RLock()
         self.camera = PiCamera()
         image_storage_folder_default = '/tmp'
@@ -98,9 +101,10 @@ class App():
         with self.camera:
             self.camera.resolution = tuple(self.args.image_resolution)
             self.camera.start_preview()
+            # Camera warm-up time
             sleep(self.camera_warmup_delay)
-            logging.info('Capturing images to folder %s...', self.args.image_storage_folder)
 
+            logging.info('Capturing images to folder %s...', self.args.image_storage_folder)
             for filename in self.camera.capture_continuous(os.path.join(self.args.image_storage_folder, self.args.image_filename_template)):
                 logging.debug('Captured image %s', filename)
                 # Sleep 10 seconds before taking next picture
@@ -109,6 +113,15 @@ class App():
                     logging.debug("Sleeping for %d seconds", self.args.image_capture_interval_seconds)
                     sleep(self.args.image_capture_interval_seconds)
                     logging.debug("About to release lock")
+
+    def get_image_filename(self):
+        formatted_filename = self.args.image_filename_template
+        if '{counter}' in self.args.image_filename_template:
+            formatted_filename = self.args.image_filename_template.format(counter = self._filename_counter)
+            self._filename_counter += 1
+        if '{timestamp}' in self.args.image_filename_template:
+            formatted_filename = self.args.image_filename_template.format(timestamp = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S'))
+        return formatted_filename
 
     def signal_handler(self, sig, frame):
         logging.info('You pressed Ctrl+C. Exiting program...')
