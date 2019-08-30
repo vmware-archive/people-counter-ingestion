@@ -28,7 +28,7 @@ class App():
         image_storage_folder_default = '/tmp'
         image_resolution_default = [1024, 768]
         image_capture_interval_seconds_default = 10
-        image_filename_template_default = 'image{timestamp:%Y-%m-%d-%H-%M-%S}.jpg'
+        image_filename_template_default = "image{timestamp:%Y-%m-%d-%H-%M-%S}.jpg"
         image_filename_template_help = '''The name given to the image files. 
                 Acceptable values are any string plus {counter} and/or {timestamp} (default: image{timestamp:%%Y-%%m-%%d-%%H-%%M-%%S}.jpg).
                 Examples: image{counter}.jpg yields files like image1.jpg, image2.jpg, ...;
@@ -40,11 +40,11 @@ class App():
         # Parse values from the command line
         parser = argparse.ArgumentParser(description='People counter image ingestion service')
         parser.add_argument('--image-storage-folder', '-d', dest='image_storage_folder', default=image_storage_folder_default, 
-            help='Folder in the filesystem where images will be stored (default: {0})'.format(image_storage_folder_default))
+            help="Folder in the filesystem where images will be stored (default: {0})".format(image_storage_folder_default))
         parser.add_argument('--image-resolution', '-r', dest='image_resolution', type=int, nargs=2, default=image_resolution_default, 
-            help='Resolution for the images taken by the camera. Must be 2 integers. The max resolution is 2592 1944 (default: {0} {1})'.format(str(image_resolution_default[0]), str(image_resolution_default[1])))
+            help="Resolution for the images taken by the camera. Must be 2 integers. The max resolution is 2592 1944 (default: {0} {1})".format(str(image_resolution_default[0]), str(image_resolution_default[1])))
         parser.add_argument('--image-capture-interval', '-i', dest='image_capture_interval_seconds', type=int, default=image_capture_interval_seconds_default,
-            help='Delay in seconds between image captures (default: {0})'.format(str(image_capture_interval_seconds_default)))
+            help="Delay in seconds between image captures (default: {0})".format(str(image_capture_interval_seconds_default)))
         parser.add_argument('--image-filename-template', '-t', dest='image_filename_template', default=image_filename_template_default,
             help=image_filename_template_help)
         self.args = parser.parse_args()
@@ -54,11 +54,11 @@ class App():
         # This function does validation of the command-line arguments
 
         if not os.access(self.args.image_storage_folder, os.W_OK):
-            raise Exception('The folder {0} specified for image storage is not writtable'.format(self.args.image_storage_folder))
+            raise Exception("The folder {0} specified for image storage is not writtable".format(self.args.image_storage_folder))
         if self.args.image_resolution[0] > self.camera.MAX_RESOLUTION[0] or self.args.image_resolution[1] > self.camera.MAX_RESOLUTION[1]:
-            raise Exception('The resolution provided {0} exceeds the max allowed resolution 2592x1944 for the camera'.format(self.args.image_resolution))
+            raise Exception("The resolution provided {0} exceeds the max allowed resolution {1} for the camera".format(self.args.image_resolution, self.camera.MAX_RESOLUTION))
         if '{counter' not in self.args.image_filename_template and '{timestamp' not in self.args.image_filename_template:
-            raise Exception('The image file template provided {0} did not contain {{counter}} or {{timestamp}} in it'.format(self.args.image_filename_template))
+            raise Exception("The image file template provided {0} did not contain {{counter}} or {{timestamp}} in it".format(self.args.image_filename_template))
 
     def start_garbage_collection(self):
         # This function cleans up the directory where images are stored based on a limit on a number of images to keep defined by the user
@@ -72,7 +72,7 @@ class App():
             full_file_paths = []
             search_criteria = self.args.image_filename_template.split('.')
             search_criteria = search_criteria[len(search_criteria) - 1]
-            logging.debug("Looking for files with extention {0}".format(search_criteria))
+            logging.debug("Looking for files with extention %s", search_criteria)
 
             # Find all the files with a particualar extention
             for filename in filenames:
@@ -82,20 +82,20 @@ class App():
             # Exit the function if no images are present
             file_list_size = len(full_file_paths)
             if file_list_size <= self.image_cache_size:
-                logging.debug("Image storage folder has not exceeded the max number of files allowed: {0}. No clean up performed".format(str(self.image_cache_size)))
+                logging.debug("Image storage folder has not exceeded the max number of files allowed: %d. No clean up performed", self.image_cache_size)
                 continue
             
             # Delete all images past the max number of images allowed. Oldest files are deleted first.
             if file_list_size > 0:
                 full_file_paths.sort(key=os.path.getctime)
-                logging.debug("Files found: %s",full_file_paths)
+                logging.debug("Files found: {0}".format(full_file_paths))
                 number_of_items_to_delete = file_list_size - self.image_cache_size
-                logging.debug("Lock acquired")
+                logging.debug('Lock acquired')
                 with self.folder_lock:
                     for i in range(number_of_items_to_delete):
-                        logging.debug("Deleting file: {0}".format(full_file_paths[i]))
+                        logging.debug("Deleting file: %s", full_file_paths[i])
                         os.remove(full_file_paths[i])
-                    logging.debug("About to release lock")
+                    logging.debug('About to release lock')
 
     def start_image_collection(self):
         with self.camera:
@@ -104,9 +104,9 @@ class App():
             # Camera warm-up time
             sleep(self.camera_warmup_delay)
 
-            logging.info('Capturing images to folder %s...', self.args.image_storage_folder)
+            logging.info("Capturing images to folder %s...", self.args.image_storage_folder)
             while True:
-                logging.debug("Lock acquired")
+                logging.debug('Lock acquired')
                 with self.folder_lock:
                     filename = self.generate_image_filename()
                     try:
@@ -116,8 +116,8 @@ class App():
                         logging.info("Sleeping for %d seconds before retrying image capture", self.args.image_capture_interval_seconds)
                         sleep(self.args.image_capture_interval_seconds)
                         continue
-                    logging.debug("About to release lock")
-                logging.debug('Captured image %s', filename)
+                    logging.debug('About to release lock')
+                logging.debug("Captured image %s", filename)
 
                 logging.debug("Sleeping for %d seconds", self.args.image_capture_interval_seconds)
                 sleep(self.args.image_capture_interval_seconds)
@@ -138,11 +138,11 @@ class App():
         sys.exit(0)
 
     def run(self):
-        image_collection_thread = threading.Thread(target=self.start_image_collection, name="ImageCollectionThread", daemon=True)
-        garbage_collection_thread = threading.Thread(target=self.start_garbage_collection, name="GarbageCollectionThread", daemon=True)
+        image_collection_thread = threading.Thread(target=self.start_image_collection, name='ImageCollectionThread', daemon=True)
+        garbage_collection_thread = threading.Thread(target=self.start_garbage_collection, name='GarbageCollectionThread', daemon=True)
         image_collection_thread.start()
         garbage_collection_thread.start()
-        logging.debug("All threads initialized")
+        logging.debug('All threads initialized')
         signal.signal(signal.SIGINT, self.signal_handler)
         signal.pause()
 
