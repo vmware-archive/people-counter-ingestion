@@ -109,7 +109,13 @@ class App():
                 logging.debug("Lock acquired")
                 with self.folder_lock:
                     filename = self.generate_image_filename()
-                    self.camera.capture(os.path.join(self.args.image_storage_folder, filename))
+                    try:
+                        self.camera.capture(os.path.join(self.args.image_storage_folder, filename))
+                    except Exception as e:
+                        logging.error("An error occurred that prevented the capture of the image with the camera. Error: %s", str(e))
+                        logging.info("Sleeping for %d seconds before retrying image capture", self.args.image_capture_interval_seconds)
+                        sleep(self.args.image_capture_interval_seconds)
+                        continue
                     logging.debug("About to release lock")
                 logging.debug('Captured image %s', filename)
 
