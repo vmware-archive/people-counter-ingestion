@@ -105,22 +105,25 @@ class App():
             sleep(self.camera_warmup_delay)
 
             logging.info('Capturing images to folder %s...', self.args.image_storage_folder)
-            for filename in self.camera.capture_continuous(os.path.join(self.args.image_storage_folder, self.args.image_filename_template)):
-                logging.debug('Captured image %s', filename)
-                # Sleep 10 seconds before taking next picture
+             while True:
                 logging.debug("Lock acquired")
                 with self.folder_lock:
-                    logging.debug("Sleeping for %d seconds", self.args.image_capture_interval_seconds)
-                    sleep(self.args.image_capture_interval_seconds)
+                    filename = self.get_image_filename()
+                    camera.capture(os.path.join(self.args.image_storage_folder, filename))
                     logging.debug("About to release lock")
+                logging.debug('Captured image %s', filename)
+
+                logging.debug("Sleeping for %d seconds", self.args.image_capture_interval_seconds)
+                sleep(self.args.image_capture_interval_seconds)
+
 
     def get_image_filename(self):
-        formatted_filename = self.args.image_filename_template
-        if '{counter}' in self.args.image_filename_template:
-            formatted_filename = self.args.image_filename_template.format(counter = self._filename_counter)
+        # Helper function to get the formatted filename for continues image capturing
+
+        formatted_filename =  self.args.image_filename_template.format(counter = self._filename_counter, timestamp = datetime.datetime.now())
+        if '{counter' in self.args.image_filename_template:
             self._filename_counter += 1
-        if '{timestamp}' in self.args.image_filename_template:
-            formatted_filename = self.args.image_filename_template.format(timestamp = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S'))
+
         return formatted_filename
 
     def signal_handler(self, sig, frame):
