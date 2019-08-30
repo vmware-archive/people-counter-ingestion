@@ -105,11 +105,11 @@ class App():
             sleep(self.camera_warmup_delay)
 
             logging.info('Capturing images to folder %s...', self.args.image_storage_folder)
-             while True:
+            while True:
                 logging.debug("Lock acquired")
                 with self.folder_lock:
-                    filename = self.get_image_filename()
-                    camera.capture(os.path.join(self.args.image_storage_folder, filename))
+                    filename = self.generate_image_filename()
+                    self.camera.capture(os.path.join(self.args.image_storage_folder, filename))
                     logging.debug("About to release lock")
                 logging.debug('Captured image %s', filename)
 
@@ -117,9 +117,10 @@ class App():
                 sleep(self.args.image_capture_interval_seconds)
 
 
-    def get_image_filename(self):
+    def generate_image_filename(self):
         # Helper function to get the formatted filename for continues image capturing
 
+        logging.debug("Generating filename from template %s", self.args.image_filename_template)
         formatted_filename =  self.args.image_filename_template.format(counter = self._filename_counter, timestamp = datetime.datetime.now())
         if '{counter' in self.args.image_filename_template:
             self._filename_counter += 1
