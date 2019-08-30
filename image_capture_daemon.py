@@ -65,10 +65,14 @@ class App():
 
         logging.info("Starting garbage collection on folder %s", self.args.image_storage_folder)
         while True:
-            logging.debug("Sleeping for %d minutes", self.image_cleanup_interval_minutes)
-            sleep(self.image_cleanup_interval_minutes * 60)
+            try:
+                filenames = os.listdir(self.args.image_storage_folder)
+            except Exception as e:
+                logging.error("An error occurred that prevented the listing of images in the image folder. Error: %s", str(e))
+                logging.info("Sleeping for %d seconds before retrying", self.image_cleanup_interval_minutes * 60)
+                sleep(self.image_cleanup_interval_minutes * 60)
+                continue
 
-            filenames = os.listdir(self.args.image_storage_folder)
             full_file_paths = []
             search_criteria = self.args.image_filename_template.split('.')
             search_criteria = search_criteria[len(search_criteria) - 1]
@@ -83,19 +87,34 @@ class App():
             file_list_size = len(full_file_paths)
             if file_list_size <= self.image_cache_size:
                 logging.debug("Image storage folder has not exceeded the max number of files allowed: %d. No clean up performed", self.image_cache_size)
+                logging.debug("Sleeping for %d minutes", self.image_cleanup_interval_minutes)
+                sleep(self.image_cleanup_interval_minutes * 60)
                 continue
             
             # Delete all images past the max number of images allowed. Oldest files are deleted first.
             if file_list_size > 0:
-                full_file_paths.sort(key=os.path.getctime)
+                try:
+                    full_file_paths.sort(key=os.path.getctime)
+                except Exception as e:
+                    logging.error("An error occurred that prevented the access to creation time of files in the image folder. Error: %s", str(e))
+                    logging.info("Sleeping for %d seconds before retrying", self.image_cleanup_interval_minutes * 60)
+                    sleep(self.image_cleanup_interval_minutes * 60)
+                    continue
                 logging.debug("Files found: {0}".format(full_file_paths))
                 number_of_items_to_delete = file_list_size - self.image_cache_size
                 logging.debug('Lock acquired')
                 with self.folder_lock:
                     for i in range(number_of_items_to_delete):
                         logging.debug("Deleting file: %s", full_file_paths[i])
-                        os.remove(full_file_paths[i])
+                        try:
+                            os.remove(full_file_paths[i])
+                        except Exception as e:
+                            logging.error("An error occurred that prevented the deletion of the file ({0}) in the image folder. Error: {1}".format(full_file_paths[i], str(e)))
+                            continue
                     logging.debug('About to release lock')
+            
+            logging.debug("Sleeping for %d minutes", self.image_cleanup_interval_minutes)
+            sleep(self.image_cleanup_interval_minutes * 60)
 
     def start_image_collection(self):
         with self.camera:
@@ -115,6 +134,7 @@ class App():
                         logging.error("An error occurred that prevented the capture of the image with the camera. Error: %s", str(e))
                         logging.info("Sleeping for %d seconds before retrying image capture", self.args.image_capture_interval_seconds)
                         sleep(self.args.image_capture_interval_seconds)
+                        logging.debug('About to release lock')
                         continue
                     logging.debug('About to release lock')
                 logging.debug("Captured image %s", filename)
