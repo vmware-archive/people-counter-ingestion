@@ -44,7 +44,7 @@ class App():
         parser.add_argument('--image-storage-folder', '-d', dest='image_storage_folder', default=image_storage_folder_default, 
             help="Folder in the filesystem where images will be stored (default: {0})".format(image_storage_folder_default))
         parser.add_argument('--image-resolution', '-r', dest='image_resolution', type=int, nargs=2, default=image_resolution_default, 
-            help="Resolution for the images taken by the camera. Must be 2 integers. The max resolution is 2592 1944 (default: {0} {1})"
+            help="Resolution for the images taken by the camera. Must be 2 integers (default: {0} {1})"
                 .format(str(image_resolution_default[0]), str(image_resolution_default[1])))
         parser.add_argument('--image-capture-interval', '-i', dest='image_capture_interval_seconds', type=int, 
             default=image_capture_interval_seconds_default,
@@ -98,7 +98,7 @@ class App():
 
         logging.info("Starting garbage collection on folder %s", self.args.image_storage_folder)
         while True:
-            logging.debug("Sleeping for %d minutes", self.args.image_cleanup_interval_minutes)
+            logging.debug("Sleeping for %f minutes", self.args.image_cleanup_interval_minutes)
             sleep(self.args.image_cleanup_interval_minutes * 60)
 
             try:
