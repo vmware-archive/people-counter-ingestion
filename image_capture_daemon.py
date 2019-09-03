@@ -30,7 +30,7 @@ class App():
         image_resolution_default = [1024, 768]
         image_capture_interval_seconds_default = 10
         image_cache_size_default = 10
-        image_cleanup_interval_minutes_default = 1
+        image_cleanup_interval_minutes_default = 1.0
         image_filename_template_help = '''The name given to the image files. 
                 Acceptable values are any string plus {counter} and/or {timestamp} (default: image{timestamp:%%Y-%%m-%%d-%%H-%%M-%%S}.jpg).
                 Examples: image{counter}.jpg yields files like image1.jpg, image2.jpg, ...;
@@ -46,13 +46,15 @@ class App():
         parser.add_argument('--image-resolution', '-r', dest='image_resolution', type=int, nargs=2, default=image_resolution_default, 
             help="Resolution for the images taken by the camera. Must be 2 integers. The max resolution is 2592 1944 (default: {0} {1})"
                 .format(str(image_resolution_default[0]), str(image_resolution_default[1])))
-        parser.add_argument('--image-capture-interval', '-i', dest='image_capture_interval_seconds', type=int, default=image_capture_interval_seconds_default,
+        parser.add_argument('--image-capture-interval', '-i', dest='image_capture_interval_seconds', type=int, 
+            default=image_capture_interval_seconds_default,
             help="Delay in seconds between image captures (default: {0})".format(str(image_capture_interval_seconds_default)))
         parser.add_argument('--image-filename-template', '-t', dest='image_filename_template', default=self.image_filename_template_default,
             help=image_filename_template_help)
-        parser.add_argument('--image-cache-size', '-c', dest='image_cache_size', default=image_cache_size_default,
+        parser.add_argument('--image-cache-size', '-c', dest='image_cache_size', type=int, default=image_cache_size_default,
             help="Number of images to keep on disk (default: {0})".format(image_cache_size_default))
-        parser.add_argument('--image-cleanup-interval', '-u', dest='image_cleanup_interval_minutes',
+        parser.add_argument('--image-cleanup-interval', '-u', dest='image_cleanup_interval_minutes', type=float,
+            default=image_cleanup_interval_minutes_default,
             help="Delay in minutes between image deletion of images that exceeds the cache size (default: {0}"
                 .format(str(image_cleanup_interval_minutes_default)))
         self.args = parser.parse_args()
