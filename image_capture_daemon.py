@@ -18,17 +18,19 @@ class App():
     def __init__(self):
         # Initialization function which parses command-line arguments from the user as well as set defaults
 
-        # Default values
-        self.image_cache_size = 10
-        self.image_cleanup_interval_minutes = 1
+        # Variables needed for the internal mechanisms of the class
         self.camera_warmup_delay = 2
         self._filename_counter = 1
         self.folder_lock = threading.RLock()
         self.camera = PiCamera()
+
+        # Default values for the command line arguments
+        self.image_filename_template_default = "image{timestamp:%Y-%m-%d-%H-%M-%S}.jpg"
         image_storage_folder_default = '/tmp'
         image_resolution_default = [1024, 768]
         image_capture_interval_seconds_default = 10
-        image_filename_template_default = "image{timestamp:%Y-%m-%d-%H-%M-%S}.jpg"
+        image_cache_size_default = 10
+        image_cleanup_interval_minutes_default = 1
         image_filename_template_help = '''The name given to the image files. 
                 Acceptable values are any string plus {counter} and/or {timestamp} (default: image{timestamp:%%Y-%%m-%%d-%%H-%%M-%%S}.jpg).
                 Examples: image{counter}.jpg yields files like image1.jpg, image2.jpg, ...;
@@ -42,31 +44,60 @@ class App():
         parser.add_argument('--image-storage-folder', '-d', dest='image_storage_folder', default=image_storage_folder_default, 
             help="Folder in the filesystem where images will be stored (default: {0})".format(image_storage_folder_default))
         parser.add_argument('--image-resolution', '-r', dest='image_resolution', type=int, nargs=2, default=image_resolution_default, 
-            help="Resolution for the images taken by the camera. Must be 2 integers. The max resolution is 2592 1944 (default: {0} {1})".format(str(image_resolution_default[0]), str(image_resolution_default[1])))
+            help="Resolution for the images taken by the camera. Must be 2 integers. The max resolution is 2592 1944 (default: {0} {1})"
+                .format(str(image_resolution_default[0]), str(image_resolution_default[1])))
         parser.add_argument('--image-capture-interval', '-i', dest='image_capture_interval_seconds', type=int, default=image_capture_interval_seconds_default,
             help="Delay in seconds between image captures (default: {0})".format(str(image_capture_interval_seconds_default)))
-        parser.add_argument('--image-filename-template', '-t', dest='image_filename_template', default=image_filename_template_default,
+        parser.add_argument('--image-filename-template', '-t', dest='image_filename_template', default=self.image_filename_template_default,
             help=image_filename_template_help)
+        parser.add_argument('--image-cache-size', '-c', dest='image_cache_size', default=image_cache_size_default,
+            help="Number of images to keep on disk (default: {0})".format(image_cache_size_default))
+        parser.add_argument('--image-cleanup-interval', '-u', dest='image_cleanup_interval_minutes',
+            help="Delay in minutes between image deletion of images that exceeds the cache size (default: {0}"
+                .format(str(image_cleanup_interval_minutes_default)))
         self.args = parser.parse_args()
         self.validate()
     
     def validate(self):
         # This function does validation of the command-line arguments
 
+        if not os.access(self.args.image_storage_folder, os.F_OK):
+            raise Exception("The folder ({0}) specified for image storage does not exist"
+                .format(self.args.image_storage_folder))
+        if not os.access(self.args.image_storage_folder, os.R_OK):
+            raise Exception("The folder ({0}) specified for image storage is not readable"
+                .format(self.args.image_storage_folder))
+        if not os.access(self.args.image_storage_folder, os.X_OK):
+            raise Exception("The folder ({0}) specified for image storage does not have execute permissions"
+                .format(self.args.image_storage_folder))
         if not os.access(self.args.image_storage_folder, os.W_OK):
-            raise Exception("The folder {0} specified for image storage is not writtable".format(self.args.image_storage_folder))
+            raise Exception("The folder ({0}) specified for image storage is not writtable"
+                .format(self.args.image_storage_folder))
         if self.args.image_resolution[0] > self.camera.MAX_RESOLUTION[0] or self.args.image_resolution[1] > self.camera.MAX_RESOLUTION[1]:
-            raise Exception("The resolution provided {0} exceeds the max allowed resolution {1} for the camera".format(self.args.image_resolution, self.camera.MAX_RESOLUTION))
+            raise Exception("The resolution provided ({0}) exceeds the max allowed resolution ({1}) for the camera"
+                .format(self.args.image_resolution, self.camera.MAX_RESOLUTION))
         if '{counter' not in self.args.image_filename_template and '{timestamp' not in self.args.image_filename_template:
-            raise Exception("The image file template provided {0} did not contain {{counter}} or {{timestamp}} in it".format(self.args.image_filename_template))
+            logging.warn("The image file template provided: {0} did not contain {{counter}} or {{timestamp}} in it. The default template: {1} will be used"
+                .format(self.args.image_filename_template, self.image_filename_template_default))
+            self.args.image_filename_template = self.image_filename_template_default
+        if self.args.image_capture_interval_seconds <= 0:
+            raise Exception("The interval to capture images must be a number greater than 0. Value given: {0}"
+                .format(self.args.image_capture_interval_seconds))
+        if self.args.image_cache_size <= 0:
+            raise Exception("The number of images to keep on disk must be a number greater than 0. Value given: {0}"
+                .format(self.args.image_cache_size))
+        if self.args.image_cleanup_interval_minutes <= 0:
+            raise Exception("The interval to clean up images must be a number greater than 0. Value given: {0}"
+                .format(self.args.image_cleanup_interval_minutes))
+
 
     def start_garbage_collection(self):
         # This function cleans up the directory where images are stored based on a limit on a number of images to keep defined by the user
 
         logging.info("Starting garbage collection on folder %s", self.args.image_storage_folder)
         while True:
-            logging.debug("Sleeping for %d minutes", self.image_cleanup_interval_minutes)
-            sleep(self.image_cleanup_interval_minutes * 60)
+            logging.debug("Sleeping for %d minutes", self.args.image_cleanup_interval_minutes)
+            sleep(self.args.image_cleanup_interval_minutes * 60)
 
             try:
                 filenames = os.listdir(self.args.image_storage_folder)
@@ -86,8 +117,8 @@ class App():
 
             # Exit the function if no images are present
             file_list_size = len(full_file_paths)
-            if file_list_size <= self.image_cache_size:
-                logging.debug("Image storage folder has not exceeded the max number of files allowed: %d. No clean up performed", self.image_cache_size)
+            if file_list_size <= self.args.image_cache_size:
+                logging.debug("Image storage folder has not exceeded the max number of files allowed: %d. No clean up performed", self.args.image_cache_size)
                 continue
             
             # Delete all images past the max number of images allowed. Oldest files are deleted first.
@@ -98,7 +129,7 @@ class App():
                     logging.error("An error occurred that prevented the access to creation time of files in the image folder. Error: %s", str(e))
                     continue
                 logging.debug("Files found: {0}".format(full_file_paths))
-                number_of_items_to_delete = file_list_size - self.image_cache_size
+                number_of_items_to_delete = file_list_size - self.args.image_cache_size
                 logging.debug('Lock acquired')
                 with self.folder_lock:
                     for i in range(number_of_items_to_delete):
