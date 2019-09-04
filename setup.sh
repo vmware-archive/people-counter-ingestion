@@ -5,12 +5,17 @@
 # SPDX-License-Identifier: BSD-2-Clause
 #
 
-useradd -g video iotadmin
-if [ $? -eq 0 ]; then
-    echo "User iotadmin added successfully"
+# Check if a user exists. Create it if it does not.
+if id iotadmin > /dev/null 2>&1; then
+    echo "iotadmin user already exists. Will not create."
 else
-    echo "Failed to create iotadmin user"
-    exit 1
+    useradd -g video iotadmin
+    if [ $? -eq 0 ]; then
+        echo "User iotadmin added successfully"
+    else
+        echo "Failed to create iotadmin user"
+        exit 1
+    fi
 fi
 
 echo "Copying python code to /opt/vmware/people-counter-ingestion-service..."
