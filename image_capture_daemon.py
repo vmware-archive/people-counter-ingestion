@@ -30,7 +30,7 @@ class App():
         image_resolution_default = [1024, 768]
         image_capture_interval_seconds_default = 10
         image_cache_size_default = 10
-        image_cleanup_interval_minutes_default = 1.0
+        image_cleanup_interval_minutes_default = 1
         image_filename_template_help = '''The name given to the image files. 
                 Acceptable values are any string plus {counter} and/or {timestamp} (default: image{timestamp:%%Y-%%m-%%d-%%H-%%M-%%S}.jpg).
                 Examples: image{counter}.jpg yields files like image1.jpg, image2.jpg, ...;
@@ -53,7 +53,7 @@ class App():
             help=image_filename_template_help)
         parser.add_argument('--image-cache-size', '-c', dest='image_cache_size', type=int, default=image_cache_size_default,
             help="Number of images to keep on disk (default: {0})".format(image_cache_size_default))
-        parser.add_argument('--image-cleanup-interval', '-u', dest='image_cleanup_interval_minutes', type=float,
+        parser.add_argument('--image-cleanup-interval', '-u', dest='image_cleanup_interval_minutes', type=int,
             default=image_cleanup_interval_minutes_default,
             help="Delay in minutes between image deletion of images that exceeds the cache size (default: {0}"
                 .format(str(image_cleanup_interval_minutes_default)))
@@ -85,8 +85,8 @@ class App():
         if self.args.image_capture_interval_seconds <= 0:
             raise Exception("The interval to capture images must be a number greater than 0. Value given: {0}"
                 .format(self.args.image_capture_interval_seconds))
-        if self.args.image_cache_size <= 0:
-            raise Exception("The number of images to keep on disk must be a number greater than 0. Value given: {0}"
+        if self.args.image_cache_size <= 1:
+            raise Exception("The number of images to keep on disk must be at least 2. Value given: {0}"
                 .format(self.args.image_cache_size))
         if self.args.image_cleanup_interval_minutes <= 0:
             raise Exception("The interval to clean up images must be a number greater than 0. Value given: {0}"
@@ -98,7 +98,7 @@ class App():
 
         logging.info("Starting garbage collection on folder %s", self.args.image_storage_folder)
         while True:
-            logging.debug("Sleeping for %f minutes", self.args.image_cleanup_interval_minutes)
+            logging.debug("Sleeping for %d minutes", self.args.image_cleanup_interval_minutes)
             sleep(self.args.image_cleanup_interval_minutes * 60)
 
             try:
