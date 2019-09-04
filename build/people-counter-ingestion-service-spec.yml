@@ -6,11 +6,10 @@ package:
     headlessExecution: true
     lifecycle:
       - phase: execute
-        action: execute.sh
+        action: setup.sh
       - phase: activate
         action: activate.sh
   attachments:
-    - path: ./execute.sh
     - path: ./activate.sh
     - path: ../people-counter-ingestion.service
     - path: ../image_capture_daemon.py
