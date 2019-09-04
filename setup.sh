@@ -5,9 +5,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 #
 
-read -sp 'Enter password to create iotadmin user:' userpass
-echo
-useradd -p $(echo $userpass | openssl passwd -1 -stdin) -g video iotadmin
+useradd -g video iotadmin
 if [ $? -eq 0 ]; then
     echo "User iotadmin added successfully"
 else
