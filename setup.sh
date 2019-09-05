@@ -7,7 +7,7 @@
 
 if [ -z "$DATADIR" ]
 then
-    DATADIR=pwd
+    DATADIR=$PWD
 fi
 
 # Check if a user exists. Create it if it does not.

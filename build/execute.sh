@@ -5,5 +5,5 @@
 # SPDX-License-Identifier: BSD-2-Clause
 #
 
-# Start the service and enable it to restart when the machine boots up
-sudo ./setup.sh
+# Setup the service
+sudo sh $DATADIR/setup.sh
