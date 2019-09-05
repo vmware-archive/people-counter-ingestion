@@ -6,4 +6,4 @@
 #
 
 # Setup the service
-sudo sh $DATADIR/setup.sh
+sh $DATADIR/setup.sh
