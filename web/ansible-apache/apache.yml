@@ -17,9 +17,9 @@
 
     - name: create folder to server images
       file:
-        path: {{ http_image_folder }}
-        owner: {{ http_image_folder_owner }}
-        group: {{ http_image_folder_group }}
+        path: "{{ http_image_folder }}"
+        owner: "{{ http_image_folder_owner }}"
+        group: "{{ http_image_folder_group }}"
         state: directory
         mode: '0755'
 
