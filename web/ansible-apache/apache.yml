@@ -1,0 +1,38 @@
+---
+- hosts: apache
+  become: yes
+
+  vars:
+    http_port: 80
+    http_image_endpoint: /image
+    http_image_folder: /var/www/pictures
+    http_image_folder_owner: iotadmin
+    http_image_folder_group: video
+  tasks:
+    - name: install packages
+      apt: name=apache2 update_cache=yes state=latest
+
+    - name: enabled mod_alias
+      apache2_module: name=alias state=present
+
+    - name: create folder to server images
+      file:
+        path: {{ http_image_folder }}
+        owner: {{ http_image_folder_owner }}
+        group: {{ http_image_folder_group }}
+        state: directory
+        mode: '0755'
+
+    - name: apache2 listen on port {{ http_port }}
+      lineinfile: dest=/etc/apache2/ports.conf regexp="^Listen " line="Listen {{ http_port }}" state=present
+      notify:
+        - restart apache2
+
+    - name: create virtual host file
+      template: src=virtualhost.conf dest=/etc/apache2/sites-available/000-default.conf
+      notify:
+        - restart apache2
+
+  handlers:
+    - name: restart apache2
+      service: name=apache2 state=restarted
