@@ -8,7 +8,7 @@ Type=simple
 Restart=always
 RestartSec=5
 User=iotadmin
-ExecStart=/usr/bin/python3 /opt/vmware/people-counter-ingestion-service/image_capture_daemon.py
+ExecStart=/usr/bin/python3 /opt/vmware/people-counter-ingestion-service/image_capture_daemon.py -d /var/www/pictures
 
 [Install]
 WantedBy=multi-user.target
