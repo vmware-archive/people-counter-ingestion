@@ -1,13 +1,7 @@
 ---
-- hosts: apache
+- hosts: image_ingestion_server
   become: yes
-
-  vars:
-    http_port: 80
-    http_image_endpoint: /image
-    http_image_folder: /var/www/pictures
-    http_image_folder_owner: iotadmin
-    http_image_folder_group: video
+  
   tasks:
     - name: install packages
       apt: 

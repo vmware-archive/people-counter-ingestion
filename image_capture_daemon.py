@@ -9,6 +9,7 @@ import sys
 import signal
 from string import Template
 import datetime
+import paho.mqtt.client as mqtt
 
 format = "%(asctime)s - %(levelname)s: %(threadName)s - %(message)s"
 logging.basicConfig(format=format, level=logging.DEBUG,

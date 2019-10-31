@@ -1,0 +1,13 @@
+#
+# Copyright © 2019 VMware, Inc. All Rights Reserved.
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+
+# Here are variables related to running Ansible on the nodes
+ansible_python_interpreter: /usr/bin/python3
+http_port: 80
+http_image_endpoint: /image
+http_image_folder: /var/www/pictures
+http_image_folder_owner: iotadmin
+http_image_folder_group: video
