@@ -15,9 +15,14 @@ format = "%(asctime)s - %(levelname)s: %(threadName)s - %(message)s"
 logging.basicConfig(format=format, level=logging.DEBUG,
                         datefmt="%H:%M:%S")
 
+mqtt_client_connection_error = ""
+
 # Define event callbacks for MQTT client
 def on_connect(client, userdata, flags, rc):
+    global mqtt_client_connection_error
     logging.debug("Connected with result code: " + str(rc))
+    if rc != 0 or rc != 3:
+        mqtt_client_connection_error = "Connection to MQTT broker failed with error code: {0}".format(str(rc))
 
 def on_message(client, obj, msg):
     logging.debug(msg.topic + " " + str(msg.qos) + " " + str(msg.payload))
@@ -80,9 +85,9 @@ class App():
             help='Username to access MQTT instance to publish messages about new available images (default: none)')
         parser.add_argument('--mqtt-password', '-p', dest='mqtt_password', required=True,
             help='Password for the MQTT user that can publish messages about new available images (default: none)')
-        parser.add_argument('--mqtt-hostname', '-h', dest='mqtt_hostname', required=True,
+        parser.add_argument('--mqtt-hostname', '-s', dest='mqtt_hostname', required=True,
             help='Hostname of the MQTT instance to publish messages about new available images (default: none)')
-        parser.add_argument('--mqtt-port', '-c', dest='mqtt_port', type=int, required=True,
+        parser.add_argument('--mqtt-port', '-e', dest='mqtt_port', type=int, required=True,
             help="Host port to use to connect to MQTT instance to publish messages about new available images (default: none)")
         parser.add_argument('--mqtt-topic', '-o', dest='mqtt_topic', default=mqtt_topic_default, 
             help="MQTT topic to publish mesages about new available images (default: {0})".format(mqtt_topic_default))
@@ -185,7 +190,9 @@ class App():
                     filename = self.generate_image_filename()
                     try:
                         self.camera.capture(os.path.join(self.args.image_storage_folder, filename))
-                        self.mqtt_client.publish(self.args.mqtt_topic, "Image {0} is available".format(filename), self.mqtt_qos_level)
+                        payload = "Image {0} is available".format(filename)
+                        logging.debug("Publishing on topic '%s' message '%s'", self.args.mqtt_topic, payload)
+                        self.mqtt_client.publish(self.args.mqtt_topic, payload, self.mqtt_qos_level)
                     except Exception as e:
                         logging.error("An error occurred that prevented the capture of the image with the camera. Error: %s", str(e))
                         logging.info("Sleeping for %d seconds before retrying image capture", self.args.image_capture_interval_seconds)
@@ -216,7 +223,14 @@ class App():
 
     def run(self):
         # Initialize the MQTT client
+        #self.mqtt_client.username_pw_set(self.args.mqtt_username, self.mqtt_client.mqtt_password)
+        global mqtt_client_connection_error
+        logging.info("Connecting to MQTT broker...")
         self.mqtt_client.connect(self.args.mqtt_hostname, self.args.mqtt_port)
+        sleep(10)
+        if mqtt_client_connection_error != "":
+            raise Exception(mqtt_client_connection_error)
+        logging.info("Success")
         self.mqtt_client.loop_start()
 
         # Start all the threads
