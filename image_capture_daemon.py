@@ -51,7 +51,7 @@ class App():
         self.mqtt_client.on_publish = on_publish
 
         # Generate download URL for images
-        ip_address = socket.gethostbyname(socket.gethostname())
+        ip_address = self.get_ip_address()
         self.download_base_url = "http://{0}/images".format(ip_address)
 
         # Default values for the command line arguments
@@ -218,7 +218,18 @@ class App():
                 logging.debug("Sleeping for %d seconds", self.args.image_capture_interval_seconds)
                 sleep(self.args.image_capture_interval_seconds)
 
+    def get_ip_address(self):
+        ip_address = socket.gethostbyname(socket.gethostname())
+        if ip_address.startswith("127."):
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
+            s.connect(("8.8.8.8", 80))
+            ip_address = s.getsockname()[0] 
+            s.close()
 
+        if ip_address.startswith("127."):
+            raise Exception("No IP address found for the host machine")
+
+        return ip_address
     def generate_image_filename(self):
         # Helper function to get the formatted filename for continues image capturing
 
