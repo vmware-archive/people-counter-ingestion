@@ -21,7 +21,7 @@ mqtt_client_connection_error = ""
 def on_connect(client, userdata, flags, rc):
     global mqtt_client_connection_error
     logging.debug("Connected with result code: " + str(rc))
-    if rc != 0 or rc != 3:
+    if rc != 0 and rc != 3:
         mqtt_client_connection_error = "Connection to MQTT broker failed with error code: {0}".format(str(rc))
 
 def on_message(client, obj, msg):
