@@ -10,6 +10,9 @@ import signal
 from string import Template
 import datetime
 import paho.mqtt.client as mqtt
+import json
+import uuid
+import socket
 
 format = "%(asctime)s - %(levelname)s: %(threadName)s - %(message)s"
 logging.basicConfig(format=format, level=logging.DEBUG,
@@ -46,6 +49,10 @@ class App():
         self.mqtt_client.on_message = on_message
         self.mqtt_client.on_connect = on_connect
         self.mqtt_client.on_publish = on_publish
+
+        # Generate download URL for images
+        ip_address = socket.gethostbyname(socket.gethostname())
+        self.download_base_url = "http://{0}/images".format(ip_address)
 
         # Default values for the command line arguments
         self.image_filename_template_default = "image{timestamp:%Y-%m-%d-%H-%M-%S}.jpg"
@@ -190,9 +197,15 @@ class App():
                     filename = self.generate_image_filename()
                     try:
                         self.camera.capture(os.path.join(self.args.image_storage_folder, filename))
-                        payload = "Image {0} is available".format(filename)
-                        logging.debug("Publishing on topic '%s' message '%s'", self.args.mqtt_topic, payload)
-                        self.mqtt_client.publish(self.args.mqtt_topic, payload, self.mqtt_qos_level)
+                        payload = {
+                            "deviceID": uuid.getnode(), #TODO find a better unique identifier for the machine
+                            "filename": filename,
+                            "dataDownloadURL": self.download_base_url + '/' + filename,
+                            "creationTimestamp": datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
+                        }
+                        json_payload = json.dumps(payload)
+                        logging.debug("Publishing on topic: '%s' message: '%s'", self.args.mqtt_topic, json_payload)
+                        self.mqtt_client.publish(self.args.mqtt_topic, json_payload, self.mqtt_qos_level)
                     except Exception as e:
                         logging.error("An error occurred that prevented the capture of the image with the camera. Error: %s", str(e))
                         logging.info("Sleeping for %d seconds before retrying image capture", self.args.image_capture_interval_seconds)
