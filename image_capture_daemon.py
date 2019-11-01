@@ -227,11 +227,11 @@ class App():
         global mqtt_client_connection_error
         logging.info("Connecting to MQTT broker...")
         self.mqtt_client.connect(self.args.mqtt_hostname, self.args.mqtt_port)
+        self.mqtt_client.loop_start()
         sleep(10)
         if mqtt_client_connection_error != "":
             raise Exception(mqtt_client_connection_error)
         logging.info("Success")
-        self.mqtt_client.loop_start()
 
         # Start all the threads
         image_collection_thread = threading.Thread(target=self.start_image_collection, name='ImageCollectionThread', daemon=True)
