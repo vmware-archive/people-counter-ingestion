@@ -76,13 +76,13 @@ class App():
             default=image_cleanup_interval_minutes_default,
             help="Delay in minutes between image deletion of images that exceeds the cache size (default: {0}"
                 .format(str(image_cleanup_interval_minutes_default)))
-        parser.add_argument('--mqtt-username', '-n', dest='mqtt_username',
+        parser.add_argument('--mqtt-username', '-n', dest='mqtt_username', required=True,
             help='Username to access MQTT instance to publish messages about new available images (default: none)')
-        parser.add_argument('--mqtt-password', '-p', dest='mqtt_password',
+        parser.add_argument('--mqtt-password', '-p', dest='mqtt_password', required=True,
             help='Password for the MQTT user that can publish messages about new available images (default: none)')
-        parser.add_argument('--mqtt-hostname', '-h', dest='mqtt_hostname',
+        parser.add_argument('--mqtt-hostname', '-h', dest='mqtt_hostname', required=True,
             help='Hostname of the MQTT instance to publish messages about new available images (default: none)')
-        parser.add_argument('--mqtt-port', '-c', dest='mqtt_port', type=int,
+        parser.add_argument('--mqtt-port', '-c', dest='mqtt_port', type=int, required=True,
             help="Host port to use to connect to MQTT instance to publish messages about new available images (default: none)")
         parser.add_argument('--mqtt-topic', '-o', dest='mqtt_topic', default=mqtt_topic_default, 
             help="MQTT topic to publish mesages about new available images (default: {0})".format(mqtt_topic_default))
