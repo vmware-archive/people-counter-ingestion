@@ -15,6 +15,16 @@ format = "%(asctime)s - %(levelname)s: %(threadName)s - %(message)s"
 logging.basicConfig(format=format, level=logging.DEBUG,
                         datefmt="%H:%M:%S")
 
+# Define event callbacks for MQTT client
+def on_connect(client, userdata, flags, rc):
+    logging.debug("Connected with result code: " + str(rc))
+
+def on_message(client, obj, msg):
+    logging.debug(msg.topic + " " + str(msg.qos) + " " + str(msg.payload))
+
+def on_publish(client, obj, mid):
+    logging.debug("mid: " + str(mid))
+
 class App():
     def __init__(self):
         # Initialization function which parses command-line arguments from the user as well as set defaults
@@ -24,6 +34,13 @@ class App():
         self._filename_counter = 1
         self.folder_lock = threading.RLock()
         self.camera = PiCamera()
+        self.mqtt_client = mqtt.Client()
+        self.mqtt_qos_level = 0
+
+        # Assign event callbacks for MQTT client
+        self.mqtt_client.on_message = on_message
+        self.mqtt_client.on_connect = on_connect
+        self.mqtt_client.on_publish = on_publish
 
         # Default values for the command line arguments
         self.image_filename_template_default = "image{timestamp:%Y-%m-%d-%H-%M-%S}.jpg"
@@ -32,6 +49,7 @@ class App():
         image_capture_interval_seconds_default = 10
         image_cache_size_default = 10
         image_cleanup_interval_minutes_default = 1
+        mqtt_topic_default = 'image/latest'
         image_filename_template_help = '''The name given to the image files. 
                 Acceptable values are any string plus {counter} and/or {timestamp} (default: image{timestamp:%%Y-%%m-%%d-%%H-%%M-%%S}.jpg).
                 Examples: image{counter}.jpg yields files like image1.jpg, image2.jpg, ...;
@@ -58,6 +76,16 @@ class App():
             default=image_cleanup_interval_minutes_default,
             help="Delay in minutes between image deletion of images that exceeds the cache size (default: {0}"
                 .format(str(image_cleanup_interval_minutes_default)))
+        parser.add_argument('--mqtt-username', '-n', dest='mqtt_username',
+            help='Username to access MQTT instance to publish messages about new available images (default: none)')
+        parser.add_argument('--mqtt-password', '-p', dest='mqtt_password',
+            help='Password for the MQTT user that can publish messages about new available images (default: none)')
+        parser.add_argument('--mqtt-hostname', '-h', dest='mqtt_hostname',
+            help='Hostname of the MQTT instance to publish messages about new available images (default: none)')
+        parser.add_argument('--mqtt-port', '-c', dest='mqtt_port', type=int,
+            help="Host port to use to connect to MQTT instance to publish messages about new available images (default: none)")
+        parser.add_argument('--mqtt-topic', '-o', dest='mqtt_topic', default=mqtt_topic_default, 
+            help="MQTT topic to publish mesages about new available images (default: {0})".format(mqtt_topic_default))
         self.args = parser.parse_args()
         self.validate()
     
@@ -92,7 +120,6 @@ class App():
         if self.args.image_cleanup_interval_minutes <= 0:
             raise Exception("The interval to clean up images must be a number greater than 0. Value given: {0}"
                 .format(self.args.image_cleanup_interval_minutes))
-
 
     def start_garbage_collection(self):
         # This function cleans up the directory where images are stored based on a limit on a number of images to keep defined by the user
@@ -158,7 +185,7 @@ class App():
                     filename = self.generate_image_filename()
                     try:
                         self.camera.capture(os.path.join(self.args.image_storage_folder, filename))
-                        #TODO insert MQTT client code here
+                        self.mqtt_client.publish(self.args.mqtt_topic, "Image {0} is available".format(filename), self.mqtt_qos_level)
                     except Exception as e:
                         logging.error("An error occurred that prevented the capture of the image with the camera. Error: %s", str(e))
                         logging.info("Sleeping for %d seconds before retrying image capture", self.args.image_capture_interval_seconds)
@@ -184,9 +211,15 @@ class App():
 
     def signal_handler(self, sig, frame):
         logging.info('You pressed Ctrl+C. Exiting program...')
+        self.mqtt_client.loop_stop()
         sys.exit(0)
 
     def run(self):
+        # Initialize the MQTT client
+        self.mqtt_client.connect(self.args.mqtt_hostname, self.args.mqtt_port)
+        self.mqtt_client.loop_start()
+
+        # Start all the threads
         image_collection_thread = threading.Thread(target=self.start_image_collection, name='ImageCollectionThread', daemon=True)
         garbage_collection_thread = threading.Thread(target=self.start_garbage_collection, name='GarbageCollectionThread', daemon=True)
         image_collection_thread.start()
@@ -196,4 +229,9 @@ class App():
         signal.pause()
 
 app = App()
-app.run()
+try:
+    app.run()
+except Exception as e:
+    # Make sure to end the MQTT connection in case of errors
+    logging.error("An error occurred that prevented the application from running. Error: %s", str(e))
+    app.mqtt_client.loop_stop()
