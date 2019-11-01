@@ -225,7 +225,7 @@ class App():
         # Initialize the MQTT client
         global mqtt_client_connection_error
         logging.info("Connecting to MQTT broker...")
-        self.mqtt_client.username_pw_set(self.args.mqtt_username, self.mqtt_client.mqtt_password)
+        self.mqtt_client.username_pw_set(self.args.mqtt_username, self.args.mqtt_password)
         self.mqtt_client.connect(self.args.mqtt_hostname, self.args.mqtt_port)
         self.mqtt_client.loop_start()
         sleep(10)
