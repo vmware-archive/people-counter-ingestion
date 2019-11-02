@@ -52,7 +52,7 @@ class App():
 
         # Generate download URL for images
         ip_address = self.get_ip_address()
-        self.download_base_url = "http://{0}/images".format(ip_address)
+        self.download_base_url = "http://{0}/image".format(ip_address)
 
         # Default values for the command line arguments
         self.image_filename_template_default = "image{timestamp:%Y-%m-%d-%H-%M-%S}.jpg"
