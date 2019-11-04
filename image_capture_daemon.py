@@ -27,9 +27,6 @@ def on_connect(client, userdata, flags, rc):
     if rc != 0 and rc != 3:
         mqtt_client_connection_error = "Connection to MQTT broker failed with error code: {0}".format(str(rc))
 
-def on_message(client, obj, msg):
-    logging.debug(msg.topic + " " + str(msg.qos) + " " + str(msg.payload))
-
 def on_publish(client, obj, mid):
     logging.debug("mid: " + str(mid))
 
@@ -46,7 +43,6 @@ class App():
         self.mqtt_qos_level = 0
 
         # Assign event callbacks for MQTT client
-        self.mqtt_client.on_message = on_message
         self.mqtt_client.on_connect = on_connect
         self.mqtt_client.on_publish = on_publish
 
