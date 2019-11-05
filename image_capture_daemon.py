@@ -93,7 +93,7 @@ class App():
             help="Host port to use to connect to MQTT instance to publish messages about new available images (default: none)")
         parser.add_argument('--mqtt-topic', '-o', dest='mqtt_topic', default=mqtt_topic_default, 
             help="MQTT topic to publish mesages about new available images (default: {0})".format(mqtt_topic_default))
-        parser.add_argument('--pulse-device-id', '-n', dest='pulse_device_id', required=True,
+        parser.add_argument('--pulse-device-id', '-v', dest='pulse_device_id', required=True,
             help='Pulse ID associated with the camera device (default: none)')
         self.args = parser.parse_args()
         self.validate()
