@@ -11,7 +11,6 @@ from string import Template
 import datetime
 import paho.mqtt.client as mqtt
 import json
-import uuid
 import socket
 
 format = "%(asctime)s - %(levelname)s: %(threadName)s - %(message)s"
@@ -94,6 +93,8 @@ class App():
             help="Host port to use to connect to MQTT instance to publish messages about new available images (default: none)")
         parser.add_argument('--mqtt-topic', '-o', dest='mqtt_topic', default=mqtt_topic_default, 
             help="MQTT topic to publish mesages about new available images (default: {0})".format(mqtt_topic_default))
+        parser.add_argument('--pulse-device-id', '-n', dest='pulse_device_id', required=True,
+            help='Pulse ID associated with the camera device (default: none)')
         self.args = parser.parse_args()
         self.validate()
     
@@ -194,7 +195,7 @@ class App():
                     try:
                         self.camera.capture(os.path.join(self.args.image_storage_folder, filename))
                         payload = {
-                            "deviceID": uuid.getnode(), #TODO find a better unique identifier for the machine
+                            "deviceID": self.args.pulse_device_id,
                             "filename": filename,
                             "dataDownloadURL": self.download_base_url + '/' + filename,
                             "creationTimestamp": datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
