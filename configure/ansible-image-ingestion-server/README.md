@@ -18,7 +18,7 @@ The following needs to be installed on the Ansible control machine:
 The following needs to be installed on the device edge(s):
 
 * SSH daemon with remote access enabled
-* Python 2.7 or greater
+* Python 3.7.2
 
 ### Configuration
 
