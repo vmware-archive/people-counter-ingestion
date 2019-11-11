@@ -31,6 +31,13 @@
         group: "{{ http_image_folder_group }}"
         state: directory
         mode: '0755'
+        
+    - name: add IP address to the hosts file
+      lineinfile:
+        dest: /etc/hosts
+        regexp: "raspberrypi$"
+        line: "{{ansible_facts['default_ipv4']['address']}}   raspberrypi"
+        state: present
 
     - name: enabled mod_alias for apache2
       apache2_module: name=alias state=present

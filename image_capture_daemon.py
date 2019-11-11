@@ -218,15 +218,10 @@ class App():
     def get_ip_address(self):
         ip_address = socket.gethostbyname(socket.gethostname())
         if ip_address.startswith("127."):
-            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
-            s.connect(("8.8.8.8", 80))
-            ip_address = s.getsockname()[0] 
-            s.close()
-
-        if ip_address.startswith("127."):
-            raise Exception("No IP address found for the host machine")
+            raise Exception("No IP address found for the host machine. Please make sure a non-local IP address is configured for the system")
 
         return ip_address
+        
     def generate_image_filename(self):
         # Helper function to get the formatted filename for continues image capturing
 
