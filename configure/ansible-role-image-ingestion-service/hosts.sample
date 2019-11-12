@@ -1,2 +1,2 @@
-[image_ingestion_server]
+[image_ingestion_service]
 INSERT_IP_ADDRESS ansible_ssh_user=INSERT_USERNAME

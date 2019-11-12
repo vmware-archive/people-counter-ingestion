@@ -1,5 +1,5 @@
 ---
-- hosts: image_ingestion_server
+- hosts: image_ingestion_service
   become: yes
   
   tasks:
