@@ -59,15 +59,15 @@
     src: ip-address-manager.timer
     dest: /etc/systemd/system
 
-- name: start IP address manager timer
-  service: 
-    name: ip-address-manager.timer
-    state: started
-    enabled: yes
-
 - name: start IP address manager service
   service: 
     name: ip-address-manager.service
+    state: started
+    enabled: yes
+
+- name: start IP address manager timer
+  service: 
+    name: ip-address-manager.timer
     state: started
     enabled: yes
 
