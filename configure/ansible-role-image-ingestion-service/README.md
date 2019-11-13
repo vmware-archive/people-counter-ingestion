@@ -29,7 +29,7 @@ Once you have the repository cloned into the machine you are going to use as the
 To execute the playbook, run the following command from the root directory:
 
 ```bash
-ansible-playbook -i hosts image-ingestion-service.yml --ask-pass --ask-become-pass
+ansible-playbook -i hosts site.yml --ask-pass --ask-become-pass
 ```
 
 The playbook will ask you for the password that belongs to the `remote_user` account you specified and the sudo password for the device if it

@@ -1,0 +1,54 @@
+#
+# Copyright © 2019 VMware, Inc. All Rights Reserved.
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+---
+- name: install packages
+  apt: 
+    name: "{{ packages }}"
+    update_cache: yes 
+    state: latest
+  vars:
+    packages:
+      - apache2
+      - python3
+      - python3-pip
+
+- pip:
+    name: paho-mqtt==1.5.0
+
+- name: Add the user '{{ http_image_folder_owner }}' with the primary group of {{ http_image_folder_group }}
+  user:
+    name: "{{ http_image_folder_owner }}"
+    state: present
+    comment: IoT Admin
+    group: "{{ http_image_folder_group }}"
+
+- name: create folder to server images
+  file:
+    path: "{{ http_image_folder }}"
+    owner: "{{ http_image_folder_owner }}"
+    group: "{{ http_image_folder_group }}"
+    state: directory
+    mode: '0755'
+    
+- name: add IP address to the hosts file
+  lineinfile:
+    dest: /etc/hosts
+    regexp: "raspberrypi$"
+    line: "{{ansible_facts['default_ipv4']['address']}}   raspberrypi"
+    state: present
+
+- name: enabled mod_alias for apache2
+  apache2_module: name=alias state=present
+
+- name: apache2 listen on port {{ http_port }}
+  lineinfile: dest=/etc/apache2/ports.conf regexp="^Listen " line="Listen {{ http_port }}" state=present
+  notify:
+    - restart apache2
+
+- name: create virtual host file
+  template: src=virtualhost.conf dest=/etc/apache2/sites-available/000-default.conf
+  notify:
+    - restart apache2
