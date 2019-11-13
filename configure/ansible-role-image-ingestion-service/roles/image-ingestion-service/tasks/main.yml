@@ -32,23 +32,60 @@
     group: "{{ http_image_folder_group }}"
     state: directory
     mode: '0755'
-    
-- name: add IP address to the hosts file
-  lineinfile:
-    dest: /etc/hosts
-    regexp: "raspberrypi$"
-    line: "{{ansible_facts['default_ipv4']['address']}}   raspberrypi"
-    state: present
+
+- name: create folder to host the ip address update script
+  file:
+    path: "{{ip_address_manager_folder}}"
+    owner: "{{ http_image_folder_owner }}"
+    group: "{{ http_image_folder_group }}"
+    state: directory
+    mode: '0755'
+
+- name: copy ip address update script to folder {{ip_address_manager_folder}}
+  copy:
+    src: ip-address-manager.sh
+    dest: "{{ip_address_manager_folder}}"
+    owner: "{{ http_image_folder_owner }}"
+    group: "{{ http_image_folder_group }}"
+    mode: '0744'
+
+- name: add IP address manager unit file
+  template: 
+    src: ip-address-manager.service
+    dest: /etc/systemd/system
+
+- name: add IP address manager timer file
+  template: 
+    src: ip-address-manager.timer
+    dest: /etc/systemd/system
+
+- name: start IP address manager timer
+  service: 
+    name: ip-address-manager.timer
+    state: started
+    enabled: yes
+
+- name: start IP address manager service
+  service: 
+    name: ip-address-manager.service
+    state: started
+    enabled: yes
 
 - name: enabled mod_alias for apache2
   apache2_module: name=alias state=present
 
 - name: apache2 listen on port {{ http_port }}
-  lineinfile: dest=/etc/apache2/ports.conf regexp="^Listen " line="Listen {{ http_port }}" state=present
+  lineinfile: 
+    dest: /etc/apache2/ports.conf 
+    regexp: "^Listen " 
+    line: "Listen {{ http_port }}" 
+    state: present
   notify:
     - restart apache2
 
 - name: create virtual host file
-  template: src=virtualhost.conf dest=/etc/apache2/sites-available/000-default.conf
+  template: 
+    src: virtualhost.conf
+    dest: /etc/apache2/sites-available/000-default.conf
   notify:
     - restart apache2
