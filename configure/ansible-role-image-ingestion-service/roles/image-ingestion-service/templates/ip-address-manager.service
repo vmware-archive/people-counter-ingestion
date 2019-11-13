@@ -1,11 +1,10 @@
 [Unit]
 Description=IP address manager that keeps the IP address in the /etc/hosts up-to-date
 After=network.target
-StartLimitIntervalSec=0
 
 [Service]
 Type=oneshot
-ExecStart=bin/bash {{ip_address_manager_folder}}/ip-address-manager.sh
+ExecStart=/bin/bash {{ip_address_manager_folder}}/ip-address-manager.sh
 
 [Install]
 WantedBy=multi-user.target

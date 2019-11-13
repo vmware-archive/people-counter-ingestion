@@ -53,11 +53,15 @@
   template: 
     src: ip-address-manager.service
     dest: /etc/systemd/system
+  notify:
+    - reload systemd
 
 - name: add IP address manager timer file
   template: 
     src: ip-address-manager.timer
     dest: /etc/systemd/system
+  notify:
+    - reload systemd
 
 - name: start IP address manager service
   service: 
