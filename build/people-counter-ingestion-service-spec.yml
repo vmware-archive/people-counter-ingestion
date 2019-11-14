@@ -6,9 +6,9 @@ package:
     headlessExecution: true
     lifecycle:
       - phase: execute
-        action: execute.sh
+        action: ./execute.sh
       - phase: activate
-        action: activate.sh
+        action: ./activate.sh
   attachments:
     - path: ./execute.sh
     - path: ./activate.sh
