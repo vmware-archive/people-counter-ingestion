@@ -11,6 +11,8 @@ http_image_endpoint: /image
 http_image_folder: /var/www/pictures
 http_image_folder_owner: iotadmin
 http_image_folder_group: video
-ip_address_manager_folder: /opt/vmware/ip-address-manager
-ip_address_manager_on_unit_active_sec: 60s
-ip_address_manager_on_boot_sec: 60s
+s3_bucket_name: people-counter-images
+s3_url: CHANGE_ME
+s3_access_key: CHANGE_ME
+s3_secret_key: CHANGE_ME
+    

@@ -26,10 +26,14 @@ echo "Working directory: $DATADIR" | systemd-cat -t ingestion-service-install -p
 # fi
 
 echo "Creating directory /opt/vmware/people-counter-ingestion-service..." | systemd-cat -t ingestion-service-install -p info
-mkdir -p /opt/vmware/people-counter-ingestion-service
+mkdir -p /opt/vmware/people-counter-ingestion-service/object_store/providers
 
 echo "Copying python code to /opt/vmware/people-counter-ingestion-service..." | systemd-cat -t ingestion-service-install -p info
 install -C -m 775 -o iotadmin -g video $DATADIR/image_capture_daemon.py /opt/vmware/people-counter-ingestion-service
+install -C -m 775 -o iotadmin -g video $DATADIR/object_store/object_store.py /opt/vmware/people-counter-ingestion-service/object_store
+install -C -m 775 -o iotadmin -g video $DATADIR/object_store/providers/minio_object_store.py /opt/vmware/people-counter-ingestion-service/object_store/providers
+install -C -m 775 -o iotadmin -g video $DATADIR/people-counter-ingestion.conf /opt/vmware/people-counter-ingestion-service
+
 
 echo "Copying unit file to /etc/systemd/system/...." | systemd-cat -t ingestion-service-install -p info
 install -C -m 775 -o root -g root $DATADIR/people-counter-ingestion.service /etc/systemd/system

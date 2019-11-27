@@ -11,12 +11,15 @@
     state: latest
   vars:
     packages:
-      - apache2
       - python3
       - python3-pip
 
-- pip:
-    name: paho-mqtt==1.5.0
+- name: install python dependencies
+  pip:
+    name: 
+    - paho-mqtt==1.5.0
+    - minio==5.0.5
+    - boto3==1.10.29
 
 - name: Add the user '{{ http_image_folder_owner }}' with the primary group of {{ http_image_folder_group }}
   user:
@@ -25,7 +28,7 @@
     comment: IoT Admin
     group: "{{ http_image_folder_group }}"
 
-- name: create folder to server images
+- name: create folder to cache images
   file:
     path: "{{ http_image_folder }}"
     owner: "{{ http_image_folder_owner }}"
@@ -33,63 +36,10 @@
     state: directory
     mode: '0755'
 
-- name: create folder to host the ip address update script
-  file:
-    path: "{{ip_address_manager_folder}}"
-    owner: "{{ http_image_folder_owner }}"
-    group: "{{ http_image_folder_group }}"
-    state: directory
-    mode: '0755'
-
-- name: copy ip address update script to folder {{ip_address_manager_folder}}
-  copy:
-    src: ip-address-manager.sh
-    dest: "{{ip_address_manager_folder}}"
-    owner: "{{ http_image_folder_owner }}"
-    group: "{{ http_image_folder_group }}"
-    mode: '0744'
-
-- name: add IP address manager unit file
-  template: 
-    src: ip-address-manager.service
-    dest: /etc/systemd/system
-  notify:
-    - reload systemd
-
-- name: add IP address manager timer file
-  template: 
-    src: ip-address-manager.timer
-    dest: /etc/systemd/system
-  notify:
-    - reload systemd
-
-- name: start IP address manager service
-  service: 
-    name: ip-address-manager.service
-    state: started
-    enabled: yes
-
-- name: start IP address manager timer
-  service: 
-    name: ip-address-manager.timer
-    state: started
-    enabled: yes
-
-- name: enabled mod_alias for apache2
-  apache2_module: name=alias state=present
-
-- name: apache2 listen on port {{ http_port }}
-  lineinfile: 
-    dest: /etc/apache2/ports.conf 
-    regexp: "^Listen " 
-    line: "Listen {{ http_port }}" 
+- name: create S3 bucket
+  s3_bucket:
+    name: "{{ s3_bucket_name }}"
+    aws_access_key: "{{ s3_access_key }}"
+    aws_secret_key: "{{ s3_secret_key }}"
+    s3_url: "{{ s3_url }}"
     state: present
-  notify:
-    - restart apache2
-
-- name: create virtual host file
-  template: 
-    src: virtualhost.conf
-    dest: /etc/apache2/sites-available/000-default.conf
-  notify:
-    - restart apache2

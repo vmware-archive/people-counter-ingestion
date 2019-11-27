@@ -6,5 +6,6 @@
 #
 
 # Start the service and enable it to restart when the machine boots up
+systemctl daemon-reload
 systemctl start people-counter-ingestion
 systemctl enable people-counter-ingestion

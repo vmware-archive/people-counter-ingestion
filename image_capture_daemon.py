@@ -12,6 +12,7 @@ import datetime
 import paho.mqtt.client as mqtt
 import json
 import socket
+from object_store.providers.minio_object_store import MinioObjectStore as store
 
 format = "%(asctime)s - %(levelname)s: %(threadName)s - %(message)s"
 logging.basicConfig(format=format, level=logging.DEBUG,
@@ -44,10 +45,6 @@ class App():
         # Assign event callbacks for MQTT client
         self.mqtt_client.on_connect = on_connect
         self.mqtt_client.on_publish = on_publish
-
-        # Generate download URL for images
-        ip_address = self.get_ip_address()
-        self.download_base_url = "http://{0}/image".format(ip_address)
 
         # Default values for the command line arguments
         self.image_filename_template_default = "image{timestamp:%Y-%m-%d-%H-%M-%S}.jpg"
@@ -95,8 +92,12 @@ class App():
             help="MQTT topic to publish mesages about new available images (default: {0})".format(mqtt_topic_default))
         parser.add_argument('--pulse-device-id', '-v', dest='pulse_device_id', required=True,
             help='Pulse ID associated with the camera device (default: none)')
+        parser.add_argument('--object-store-module-arguments', '-b', dest='object_store_module_arguments', required=True,
+            help='JSON string with the arguments to the object store module (default: none)')
         self.args = parser.parse_args()
         self.validate()
+        self.object_store = store()
+        self.object_store.initialize(self.args.object_store_module_arguments)
     
     def validate(self):
         # This function does validation of the command-line arguments
@@ -137,48 +138,81 @@ class App():
         while True:
             logging.debug("Sleeping for %d minutes", self.args.image_cleanup_interval_minutes)
             sleep(self.args.image_cleanup_interval_minutes * 60)
+            self.clean_local_cache()
+            self.clean_object_store()
 
+    def clean_local_cache(self):
+        try:
+            filenames = os.listdir(self.args.image_storage_folder)
+        except Exception as e:
+            logging.error("An error occurred that prevented the listing of images in the image folder. Error: %s", str(e))
+            return
+
+        full_file_paths = []
+        search_criteria = self.args.image_filename_template.split('.')
+        search_criteria = search_criteria[len(search_criteria) - 1]
+        logging.debug("Looking for files with extention %s", search_criteria)
+
+        # Find all the files with a particualar extention
+        for filename in filenames:
+            if search_criteria in filename:
+                full_file_paths.append(os.path.join(self.args.image_storage_folder, filename))
+
+        # Exit the function if no images are present
+        file_list_size = len(full_file_paths)
+        if file_list_size <= self.args.image_cache_size:
+            logging.debug("Image storage folder has not exceeded the max number of files allowed: %d. No clean up performed", self.args.image_cache_size)
+            return
+        
+        # Delete all images past the max number of images allowed. Oldest files are deleted first.
+        if file_list_size > 0:
             try:
-                filenames = os.listdir(self.args.image_storage_folder)
+                full_file_paths.sort(key=os.path.getctime)
             except Exception as e:
-                logging.error("An error occurred that prevented the listing of images in the image folder. Error: %s", str(e))
-                continue
+                logging.error("An error occurred that prevented the access to creation time of files in the image folder. Error: %s", str(e))
+                return
+            logging.debug("Files found: {0}".format(full_file_paths))
+            number_of_items_to_delete = file_list_size - self.args.image_cache_size
+            logging.debug('Lock acquired')
+            with self.folder_lock:
+                for i in range(number_of_items_to_delete):
+                    logging.debug("Deleting file: %s", full_file_paths[i])
+                    try:
+                        os.remove(full_file_paths[i])
+                    except Exception as e:
+                        logging.error("An error occurred that prevented the deletion of the file ({0}) in the image folder. Error: {1}".format(full_file_paths[i], str(e)))
+                        continue
+                logging.debug('About to release lock')
 
-            full_file_paths = []
-            search_criteria = self.args.image_filename_template.split('.')
-            search_criteria = search_criteria[len(search_criteria) - 1]
-            logging.debug("Looking for files with extention %s", search_criteria)
+    def clean_object_store(self):
+        try:
+            filename_tup = self.object_store.list_objects()
+        except Exception as e:
+            logging.error("An error occurred that prevented the listing of images in the image folder. Error: %s", str(e))
+            return
 
-            # Find all the files with a particualar extention
-            for filename in filenames:
-                if search_criteria in filename:
-                    full_file_paths.append(os.path.join(self.args.image_storage_folder, filename))
-
-            # Exit the function if no images are present
-            file_list_size = len(full_file_paths)
-            if file_list_size <= self.args.image_cache_size:
-                logging.debug("Image storage folder has not exceeded the max number of files allowed: %d. No clean up performed", self.args.image_cache_size)
-                continue
-            
-            # Delete all images past the max number of images allowed. Oldest files are deleted first.
-            if file_list_size > 0:
-                try:
-                    full_file_paths.sort(key=os.path.getctime)
-                except Exception as e:
-                    logging.error("An error occurred that prevented the access to creation time of files in the image folder. Error: %s", str(e))
-                    continue
-                logging.debug("Files found: {0}".format(full_file_paths))
-                number_of_items_to_delete = file_list_size - self.args.image_cache_size
-                logging.debug('Lock acquired')
-                with self.folder_lock:
-                    for i in range(number_of_items_to_delete):
-                        logging.debug("Deleting file: %s", full_file_paths[i])
-                        try:
-                            os.remove(full_file_paths[i])
-                        except Exception as e:
-                            logging.error("An error occurred that prevented the deletion of the file ({0}) in the image folder. Error: {1}".format(full_file_paths[i], str(e)))
-                            continue
-                    logging.debug('About to release lock')
+        # Exit the function if no images are present
+        file_list_size = len(filename_tup)
+        if file_list_size <= self.args.image_cache_size:
+            logging.debug("Image storage folder has not exceeded the max number of files allowed: %d. No clean up performed", self.args.image_cache_size)
+            return
+        
+        # Delete all images past the max number of images allowed. Oldest files are deleted first.
+        if file_list_size > 0:
+            filename_tup.sort(key= lambda x: x[1])
+            logging.debug("Files found: {0}".format(filename_tup))
+            number_of_items_to_delete = file_list_size - self.args.image_cache_size
+            logging.debug('Lock acquired')
+            with self.folder_lock:
+                for i in range(number_of_items_to_delete):
+                    target_file = filename_tup[i][0]
+                    logging.debug("Deleting file: %s", target_file)
+                    try:
+                        self.object_store.delete(target_file)
+                    except Exception as e:
+                        logging.error("An error occurred that prevented the deletion of the file ({0}) in the image folder. Error: {1}".format(target_file, str(e)))
+                        continue
+                logging.debug('About to release lock')
 
     def start_image_collection(self):
         with self.camera:
@@ -193,12 +227,12 @@ class App():
                 with self.folder_lock:
                     filename = self.generate_image_filename()
                     try:
-                        self.camera.capture(os.path.join(self.args.image_storage_folder, filename))
+                        filepath = os.path.join(self.args.image_storage_folder, filename)
+                        self.camera.capture(filepath)
                         payload = {
                             "deviceID": self.args.pulse_device_id,
-                            "filename": filename,
-                            "dataDownloadURL": self.download_base_url + '/' + filename,
-                            "creationTimestamp": datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
+                            "imagePath": self.object_store.upload(filepath),
+                            "creationTimestamp": datetime.datetime.now().timestamp()
                         }
                         json_payload = json.dumps(payload)
                         logging.debug("Publishing on topic: '%s' message: '%s'", self.args.mqtt_topic, json_payload)
@@ -214,13 +248,6 @@ class App():
 
                 logging.debug("Sleeping for %d seconds", self.args.image_capture_interval_seconds)
                 sleep(self.args.image_capture_interval_seconds)
-
-    def get_ip_address(self):
-        ip_address = socket.gethostbyname(socket.gethostname())
-        if ip_address.startswith("127."):
-            raise Exception("No IP address found for the host machine. Please make sure a non-local IP address is configured for the system")
-
-        return ip_address
         
     def generate_image_filename(self):
         # Helper function to get the formatted filename for continues image capturing
@@ -264,4 +291,6 @@ try:
 except Exception as e:
     # Make sure to end the MQTT connection in case of errors
     logging.error("An error occurred that prevented the application from running. Error: %s", str(e))
-    app.mqtt_client.loop_stop()
+    if app.mqtt_client is not None:
+        app.mqtt_client.loop_stop()
+        
