@@ -1,3 +1,8 @@
+#
+# Copyright © 2019 VMware, Inc. All Rights Reserved.
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
 import time
 from time import sleep
 from picamera import PiCamera
