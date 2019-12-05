@@ -1,3 +1,8 @@
+#
+# Copyright © 2019 VMware, Inc. All Rights Reserved.
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
 from object_store.object_store import ObjectStoreInterface
 from minio import Minio
 from minio.error import ResponseError

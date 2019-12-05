@@ -1,2 +1,7 @@
+#
+# Copyright © 2019 VMware, Inc. All Rights Reserved.
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
 [image_ingestion_service]
 INSERT_IP_ADDRESS ansible_ssh_user=INSERT_USERNAME
