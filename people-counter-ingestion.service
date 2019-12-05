@@ -4,11 +4,18 @@ After=network.target
 StartLimitIntervalSec=0
 
 [Service]
+EnvironmentFile=/opt/vmware/people-counter-ingestion-service/people-counter-ingestion.conf
 Type=simple
 Restart=always
 RestartSec=5
 User=iotadmin
-ExecStart=/usr/bin/python3 /opt/vmware/people-counter-ingestion-service/image_capture_daemon.py -d /var/www/pictures
+ExecStart=/usr/bin/python3 /opt/vmware/people-counter-ingestion-service/image_capture_daemon.py \
+    -n ${MQTT_USERNAME} -p ${MQTT_PASSWORD} -s ${MQTT_HOSTNAME} -e ${MQTT_PORT} -v ${PULSE_DEVICE_ID} \
+    -b '{"host": "${OBJECT_STORE_HOSTNAME}:${OBJECT_STORE_PORT}", \
+    "accessKey": "${OBJECT_STORE_ACCESS_KEY}", \
+    "secretKey": "${OBJECT_STORE_SECRET_KEY}", \
+    "bucketName": "${OBJECT_STORE_BUCKET_NAME}", \
+    "httpsEnabled": ${OBJECT_STORE_HTTPS_ENABLED}}'
 
 [Install]
 WantedBy=multi-user.target

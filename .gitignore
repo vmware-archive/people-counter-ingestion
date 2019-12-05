@@ -7,3 +7,6 @@ __pycache__/
 
 # Generated Pulse package CLI files
 *.iotcp
+
+# Credentials file for the application
+people-counter-ingestion.conf

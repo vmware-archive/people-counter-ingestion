@@ -2,6 +2,8 @@ package:
   name: people_counter_ingestion_service
   description: People counter ingestion demo service to continuously take pictures
   version: 1.0.0
+  os: linux
+  architecture: armv7l
   manifest:
     headlessExecution: true
     lifecycle:
@@ -14,4 +16,6 @@ package:
     - path: ./activate.sh
     - path: ../people-counter-ingestion.service
     - path: ../image_capture_daemon.py
-    - path: ../setup.sh
+    - path: ../object_store/providers/minio_object_store.py
+    - path: ../object_store/object_store.py
+    - path: ../people-counter-ingestion.conf
