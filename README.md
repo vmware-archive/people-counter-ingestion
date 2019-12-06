@@ -1,4 +1,4 @@
-# People Counter Ingestion Service
+# people-counter-ingestion
 
 Ingestion service for the People Counter Demo application. It is written in Python and captures images on an interval from the Raspberry Pi 3 Camera and uploads them to Minio to make them available for inference. The daemon uses MQTT to advertise that a new image has been uploaded to Minio where other microservices can access them.
 
@@ -63,3 +63,19 @@ When the campaign finishes execution, you can check your MQTT image-related mess
 ```
 
 We should also start seeing the actual image files uploaded to the object store specified in the configurations.
+
+## Contributing
+
+The people-counter-ingestion project team welcomes contributions from the community. Before you start working with people-counter-ingestion, please
+read our [Developer Certificate of Origin](https://cla.vmware.com/dco). All contributions to this repository must be
+signed as described on that page. Your signature certifies that you wrote the patch or have the right to pass it on
+as an open-source patch. For more detailed information, refer to [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Authors
+
+* [Luis M. Valerio](https://github.com/lvalerio)
+* [Neeraj Arora](https://github.com/nearora)
+
+## License
+
+This project is licensed under the BSD 2-Clause License - see the [LICENSE.txt](LICENSE.txt) file for details
