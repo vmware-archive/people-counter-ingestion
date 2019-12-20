@@ -235,6 +235,7 @@ class App():
                         filepath = os.path.join(self.args.image_storage_folder, filename)
                         self.camera.capture(filepath)
                         payload = {
+                            "type": "data",
                             "deviceID": self.args.pulse_device_id,
                             "imagePath": self.object_store.upload(filepath),
                             "creationTimestamp": datetime.datetime.now().timestamp()
