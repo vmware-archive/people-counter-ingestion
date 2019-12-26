@@ -20,7 +20,8 @@ ExecStart=/usr/bin/python3 /opt/vmware/people-counter-ingestion-service/image_ca
     "accessKey": "${OBJECT_STORE_ACCESS_KEY}", \
     "secretKey": "${OBJECT_STORE_SECRET_KEY}", \
     "bucketName": "${OBJECT_STORE_BUCKET_NAME}", \
-    "httpsEnabled": ${OBJECT_STORE_HTTPS_ENABLED}}'
+    "httpsEnabled": ${OBJECT_STORE_HTTPS_ENABLED}}' \
+    -a '{"image_storage_folder": "${IMAGE_CACHE_DIRECTORY}"}'
 
 [Install]
 WantedBy=multi-user.target

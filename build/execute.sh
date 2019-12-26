@@ -25,14 +25,14 @@ echo "Working directory: $DATADIR" | systemd-cat -t ingestion-service-install -p
 #     fi
 # fi
 
-echo "Creating directory /opt/vmware/people-counter-ingestion-service..." | systemd-cat -t ingestion-service-install -p info
-mkdir -p /opt/vmware/people-counter-ingestion-service/object_store/providers
-
 echo "Copying python code to /opt/vmware/people-counter-ingestion-service..." | systemd-cat -t ingestion-service-install -p info
-install -C -m 775 -o iotadmin -g video $DATADIR/image_capture_daemon.py /opt/vmware/people-counter-ingestion-service
-install -C -m 775 -o iotadmin -g video $DATADIR/object_store.py /opt/vmware/people-counter-ingestion-service/object_store
-install -C -m 775 -o iotadmin -g video $DATADIR/minio_object_store.py /opt/vmware/people-counter-ingestion-service/object_store/providers
-install -C -m 775 -o iotadmin -g video $DATADIR/people-counter-ingestion.conf /opt/vmware/people-counter-ingestion-service
+install -D -C -m 775 -o iotadmin -g video $DATADIR/image_capture_daemon.py /opt/vmware/people-counter-ingestion-service/image_capture_daemon.py
+install -D -C -m 775 -o iotadmin -g video $DATADIR/object_store.py /opt/vmware/people-counter-ingestion-service/object_store/object_store.py
+install -D -C -m 775 -o iotadmin -g video $DATADIR/minio_object_store.py /opt/vmware/people-counter-ingestion-service/object_store/providers/minio_object_store.py
+install -D -C -m 775 -o iotadmin -g video $DATADIR/people-counter-ingestion.conf /opt/vmware/people-counter-ingestion-service/people-counter-ingestion.conf
+install -D -C -m 775 -o iotadmin -g video $DATADIR/data.py /opt/vmware/people-counter-ingestion-service/data_source/data.py
+install -D -C -m 775 -o iotadmin -g video $DATADIR/data_source.py /opt/vmware/people-counter-ingestion-service/data_source/data_source.py
+install -D -C -m 775 -o iotadmin -g video $DATADIR/raspberrypi_camera.py /opt/vmware/people-counter-ingestion-service/data_source/connected_devices/raspberrypi_camera.py
 
 
 echo "Copying unit file to /etc/systemd/system/...." | systemd-cat -t ingestion-service-install -p info
