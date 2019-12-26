@@ -20,7 +20,18 @@ package:
     - path: ./execute.sh
     - path: ./activate.sh
     - path: ../people-counter-ingestion.service
+      installPath: ./people-counter-ingestion.service
     - path: ../image_capture_daemon.py
+      installPath: ./image_capture_daemon.py
     - path: ../object_store/providers/minio_object_store.py
+      installPath: ./minio_object_store.py
     - path: ../object_store/object_store.py
+      installPath: ./object_store.py
     - path: ../people-counter-ingestion.conf
+      installPath: ./people-counter-ingestion.conf
+    - path: ../data_source/data_source.py
+      installPath: ./data_source.py
+    - path: ../data_source/data.py
+      installPath: ./data.py
+    - path: ../data_source/connected_devices/raspberrypi_camera.py
+      installPath: ./raspberrypi_camera.py

@@ -8,7 +8,7 @@
 ansible_python_interpreter: /usr/bin/python3
 http_port: 80
 http_image_endpoint: /image
-http_image_folder: /var/www/pictures
+http_image_folder: /var/lib/people-counter-ingestion
 http_image_folder_owner: iotadmin
 http_image_folder_group: video
 s3_bucket_name: people-counter-images
