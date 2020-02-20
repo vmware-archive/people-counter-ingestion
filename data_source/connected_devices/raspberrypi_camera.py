@@ -12,6 +12,7 @@ import os
 from data_source.data_source import DataSourceInterface
 from data_source.data import CapturedData
 import datetime
+import uuid
 
 class RaspberryPiCamera(DataSourceInterface):
     
@@ -26,7 +27,8 @@ class RaspberryPiCamera(DataSourceInterface):
         args = json.loads(jsonArgs)
 
         # Setup default values
-        self.image_filename_template_default = "image{timestamp:%Y-%m-%d-%H-%M-%S}.jpg"
+        image_filename_prefix_default = "image-"
+        self.image_filename_extension_default = ".jpg"
         image_storage_folder_default = '/tmp'
         image_resolution_default = [1024, 768]
         image_cache_size_default = 10
@@ -42,10 +44,14 @@ class RaspberryPiCamera(DataSourceInterface):
             self.image_resolution = args['image_resolution']
         else:
             self.image_resolution = image_resolution_default
-        if 'image_filename_template' in args:
-            self.image_filename_template = args['image_filename_template']
+        if 'image_filename_prefix' in args:
+            self.image_filename_prefix = args['image_filename_prefix']
         else:
-            self.image_filename_template = self.image_filename_template_default
+            self.image_filename_prefix = image_filename_prefix_default
+        if 'image_filename_extension' in args:
+            self.image_filename_extension = args['image_filename_extension']
+        else:
+            self.image_filename_extension = self.image_filename_extension_default
         if 'image_cache_size' in args:
             self.image_cache_size = args['image_cache_size']
         else:
@@ -62,17 +68,10 @@ class RaspberryPiCamera(DataSourceInterface):
 
     def capture_data(self):
         """
-        Uploads a file to Minio.
-
-        The function uploads a file from the path in the filesystem specified and uploads
-        it to a bucket in Minio.
-
-        Parameters:
-        filepath (string): The absolute path of the file to upload
-        bucket_name (string): Optional argument to indicate the bucket to use to upload the file
+        Takes a picture with the Raspberry PI 3 camera module
 
         Returns:
-        string: The location of the image in Minio
+        CapturedData: Object that holds the file location and the creation timestamp
         """
         logging.info("Capturing image to folder %s...", self.image_storage_folder)
         filename = self.generate_image_filename()
@@ -95,13 +94,11 @@ class RaspberryPiCamera(DataSourceInterface):
             return
 
         full_file_paths = []
-        search_criteria = self.image_filename_template.split('.')
-        search_criteria = search_criteria[len(search_criteria) - 1]
-        logging.debug("Looking for files with extention %s", search_criteria)
+        logging.debug("Looking for files with extention %s", self.image_filename_extension)
 
         # Find all the files with a particualar extention
         for filename in filenames:
-            if search_criteria in filename:
+            if self.image_filename_extension in filename:
                 full_file_paths.append(os.path.join(self.image_storage_folder, filename))
 
         # Exit the function if no images are present
@@ -145,10 +142,10 @@ class RaspberryPiCamera(DataSourceInterface):
         if self.image_resolution[0] > self.camera.MAX_RESOLUTION[0] or self.image_resolution[1] > self.camera.MAX_RESOLUTION[1]:
             raise Exception("The resolution provided ({0}) exceeds the max allowed resolution ({1}) for the camera"
                 .format(self.image_resolution, self.camera.MAX_RESOLUTION))
-        if '{counter' not in self.image_filename_template and '{timestamp' not in self.image_filename_template:
-            logging.warn("The image file template provided: {0} did not contain {{counter}} or {{timestamp}} in it. The default template: {1} will be used"
-                .format(self.image_filename_template, self.image_filename_template_default))
-            self.image_filename_template = self.image_filename_template_default
+        if 'jpg' not in self.image_filename_extension and 'png' not in self.image_filename_extension:
+            logging.warn("The image filename extension provided '{0}' is not supported. Supported filename extensions are: .jpg and .png. The default extension: {1} will be used"
+                .format(self.image_filename_extension, self.image_filename_extension_default))
+            self.image_filename_extension = self.image_filename_extension_default
         if self.image_cache_size <= 1:
             raise Exception("The number of images to keep on disk must be at least 2. Value given: {0}"
                 .format(self.image_cache_size))
@@ -156,10 +153,8 @@ class RaspberryPiCamera(DataSourceInterface):
     def generate_image_filename(self):
         # Helper function to get the formatted filename for continues image capturing
 
-        logging.debug("Generating filename from template %s", self.image_filename_template)
-        formatted_filename =  self.image_filename_template.format(counter = self._filename_counter, timestamp = datetime.datetime.now())
-        if '{counter' in self.image_filename_template:
-            self._filename_counter += 1
+        logging.debug("Generating filename with prefix '%s' and extension '%s'", self.image_filename_prefix, self.image_filename_extension)
+        formatted_filename =  self.image_filename_prefix + str(uuid.uuid4()) + self.image_filename_extension
 
         return formatted_filename
 
