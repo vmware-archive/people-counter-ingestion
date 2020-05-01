@@ -15,3 +15,6 @@ OBJECT_STORE_SECRET_KEY=CHANGE_ME
 OBJECT_STORE_BUCKET_NAME=people-counter-images
 OBJECT_STORE_HTTPS_ENABLED=false
 IMAGE_CACHE_DIRECTORY=/var/lib/people-counter-ingestion
+
+# Configurations for using a USB camera
+CAMERA_DEVICE_INDEX=CHANGE_ME

@@ -17,7 +17,7 @@ import paho.mqtt.client as mqtt
 import json
 import socket
 from object_store.providers.minio_object_store import MinioObjectStore as store
-from data_source.connected_devices.raspberrypi_camera import RaspberryPiCamera as device
+from data_source.connected_devices.usb_camera import USBCamera as device
 
 format = "%(asctime)s - %(levelname)s: %(threadName)s - %(message)s"
 logging.basicConfig(format=format, level=logging.DEBUG,
