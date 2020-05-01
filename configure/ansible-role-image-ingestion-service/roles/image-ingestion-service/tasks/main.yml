@@ -20,6 +20,7 @@
     - paho-mqtt==1.5.0
     - minio==5.0.5
     - boto3==1.10.29
+    - opencv-python==4.2.0.32
 
 - name: Add the user '{{ http_image_folder_owner }}' with the primary group of {{ http_image_folder_group }}
   user:
